@@ -1,0 +1,37 @@
+{
+  "name": "worksphere-desktop",
+  "version": "1.0.0",
+  "description": "WorkSphere Desktop App — Electron 31",
+  "main": "src/main.js",
+  "scripts": {
+    "dev": "concurrently \"npm run angular\" \"wait-on http://localhost:4200 && electron .\"",
+    "angular": "cd ../web && ng serve",
+    "start": "electron .",
+    "build": "electron-builder",
+    "build:web": "cd ../web && ng build --configuration production"
+  },
+  "build": {
+    "appId": "in.worksphere.desktop",
+    "productName": "WorkSphere",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.icns"
+    },
+    "linux": {
+      "target": "AppImage"
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "!node_modules"
+    ]
+  },
+  "devDependencies": {}
+}

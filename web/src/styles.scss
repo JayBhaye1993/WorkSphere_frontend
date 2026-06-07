@@ -1,0 +1,109 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+// WorkSphere Design Tokens
+:root {
+  --ws-primary:       #1A56B0;
+  --ws-primary-dark:  #1E3A5F;
+  --ws-primary-light: #DBEAFE;
+  --ws-success:       #166534;
+  --ws-warning:       #B45309;
+  --ws-danger:        #991B1B;
+  --ws-bg:            #F8FAFC;
+  --ws-surface:       #FFFFFF;
+  --ws-border:        #E2E8F0;
+  --ws-text:          #0F172A;
+  --ws-muted:         #64748B;
+  --ws-radius-sm:     4px;
+  --ws-radius:        8px;
+  --ws-radius-lg:     12px;
+  --ws-radius-xl:     16px;
+  --ws-shadow-sm:     0 1px 3px rgba(0,0,0,0.08);
+  --ws-shadow:        0 4px 16px rgba(0,0,0,0.10);
+  --ws-shadow-lg:     0 8px 32px rgba(0,0,0,0.12);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin:      0;
+  padding:     0;
+  font-family: 'Inter', Arial, sans-serif;
+  font-size:   14px;
+  color:       var(--ws-text);
+  background:  var(--ws-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--ws-primary); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+// Utility classes
+.ws-card {
+  background: var(--ws-surface);
+  border-radius: var(--ws-radius);
+  box-shadow: var(--ws-shadow-sm);
+  padding: 24px;
+}
+
+.ws-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: var(--ws-radius);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+
+  &--primary {
+    background: var(--ws-primary);
+    color: white;
+    &:hover { background: var(--ws-primary-dark); }
+  }
+
+  &--outline {
+    background: transparent;
+    color: var(--ws-primary);
+    border: 1.5px solid var(--ws-primary);
+    &:hover { background: var(--ws-primary-light); }
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.ws-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid var(--ws-border);
+  border-radius: var(--ws-radius);
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--ws-text);
+  background: var(--ws-surface);
+  transition: border-color 0.2s;
+  outline: none;
+
+  &:focus { border-color: var(--ws-primary); }
+  &::placeholder { color: var(--ws-muted); }
+  &.error { border-color: var(--ws-danger); }
+}
+
+.ws-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ws-text);
+  margin-bottom: 6px;
+}
+
+.ws-error {
+  font-size: 12px;
+  color: var(--ws-danger);
+  margin-top: 4px;
+}
