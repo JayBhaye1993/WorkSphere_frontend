@@ -1,0 +1,23 @@
+<!-- WorkSphere logo above the card -->
+<div class="auth-logo">
+  <div class="auth-logo__icon" [innerHTML]="logo"></div>
+  <span class="auth-logo__name">Work<span>Sphere</span></span>
+</div>
+
+<!-- Card content projected from parent route -->
+<ng-content />
+
+<!-- Footer -->
+<footer class="auth-footer">
+  <div class="auth-footer__links">
+    <a routerLink="/privacy">Privacy Policy</a>
+    <span>·</span>
+    <a routerLink="/terms">Terms of Service</a>
+    <span>·</span>
+    <a routerLink="/support">Support</a>
+  </div>
+  <div class="auth-footer__copy">
+    <span [innerHTML]="shield"></span>
+    SOC 2 · TLS 1.3 encrypted · © 2026 WorkSphere. All rights reserved.
+  </div>
+</footer>

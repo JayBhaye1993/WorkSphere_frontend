@@ -1,0 +1,10 @@
+@use '../auth-shared' as *;
+
+:host {
+  display: contents;
+}
+
+// Page background wraps the layout
+.login-options {
+  margin-bottom: 20px;
+}

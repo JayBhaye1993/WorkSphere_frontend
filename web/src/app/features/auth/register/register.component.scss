@@ -1,0 +1,14 @@
+@use '../auth-shared' as *;
+
+:host {
+  display: contents;
+}
+
+.register-terms {
+  margin-bottom: 20px;
+
+  .auth-checkbox__label {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+}

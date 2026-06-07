@@ -107,3 +107,11 @@ a:hover { text-decoration: underline; }
   color: var(--ws-danger);
   margin-top: 4px;
 }
+
+// ─── Auth page background ─────────────────────────────────────────
+// Applied to the <body> or host element of auth route components
+// The .auth-page class is defined in auth-shared.scss but needs to be
+// accessible globally so the app-root background changes correctly
+body.auth-route {
+  background-color: #F4F6F8;
+}

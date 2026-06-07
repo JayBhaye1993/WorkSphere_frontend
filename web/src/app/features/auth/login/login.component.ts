@@ -1,16 +1,64 @@
-import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, signal } from '@angular/core';
+import { CommonModule }       from '@angular/common';
+import { FormsModule }        from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
+
+import { AuthService }      from '../../../core/auth/auth.service';
+import { AuthLayoutComponent } from '../auth-layout/auth-layout.component';
+import {
+  ICON_MAIL, ICON_LOCK, ICON_EYE, ICON_EYE_OFF, ICON_ARROW_RIGHT,
+} from '../auth-icons';
 
 @Component({
-  standalone: true,
-  imports: [CommonModule],
-  template: `
-    <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f1f5f9;">
-      <div style="background:white;padding:40px;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,0.1);text-align:center;">
-        <h1 style="color:#1A56B0;font-family:Inter,Arial,sans-serif;">WorkSphere</h1>
-        <p style="color:#64748B;font-family:Arial,sans-serif;">Login component — coming soon</p>
-      </div>
-    </div>
-  `,
+  selector:    'ws-login',
+  standalone:  true,
+  imports:     [CommonModule, FormsModule, RouterLink, AuthLayoutComponent],
+  templateUrl: './login.component.html',
+  styleUrls:   ['./login.component.scss'],
 })
-export class LoginComponent {}
+export class LoginComponent {
+  // ── Form state ─────────────────────────────────────────────────
+  email       = '';
+  password    = '';
+  rememberMe  = false;
+
+  // ── UI state ───────────────────────────────────────────────────
+  showPassword = signal(false);
+  isLoading    = signal(false);
+  errorMessage = signal('');
+
+  // ── Icon references for template ───────────────────────────────
+  readonly iconMail       = ICON_MAIL;
+  readonly iconLock       = ICON_LOCK;
+  readonly iconEye        = ICON_EYE;
+  readonly iconEyeOff     = ICON_EYE_OFF;
+  readonly iconArrowRight = ICON_ARROW_RIGHT;
+
+  constructor(
+    private auth:   AuthService,
+    private router: Router,
+  ) {}
+
+  togglePassword(): void {
+    this.showPassword.update(v => !v);
+  }
+
+  onSubmit(): void {
+    if (!this.email || !this.password) {
+      this.errorMessage.set('Please enter your email and password.');
+      return;
+    }
+
+    this.errorMessage.set('');
+    this.isLoading.set(true);
+
+    this.auth.login({ email: this.email, password: this.password }).subscribe({
+      next:  () => this.router.navigate(['/dashboard']),
+      error: (err) => {
+        const msg = err?.error?.error ?? 'Invalid email or password. Please try again.';
+        this.errorMessage.set(msg);
+        this.isLoading.set(false);
+      },
+    });
+  }
+}

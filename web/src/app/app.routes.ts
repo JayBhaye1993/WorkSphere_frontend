@@ -5,6 +5,7 @@ export const routes: Routes = [
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
   {
     path: 'auth',
+    // Auth pages have their own layout (no sidebar)
     loadChildren: () =>
       import('./features/auth/auth.routes').then(m => m.AUTH_ROUTES),
   },
@@ -17,12 +18,14 @@ export const routes: Routes = [
       {
         path: '',
         loadComponent: () =>
-          import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent),
+          import('./features/dashboard/dashboard.component')
+            .then(m => m.DashboardComponent),
       },
       {
         path: 'employees',
         loadChildren: () =>
-          import('./features/employees/employees.routes').then(m => m.EMPLOYEE_ROUTES),
+          import('./features/employees/employees.routes')
+            .then(m => m.EMPLOYEE_ROUTES),
       },
     ],
   },
