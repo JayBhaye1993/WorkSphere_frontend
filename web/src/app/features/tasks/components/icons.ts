@@ -1,0 +1,28 @@
+﻿// Central re-export of all Lucide icons used in WorkSphere Tasks UI
+// @lucide/angular v2+ exports individual standalone components per icon
+export {
+  LucideCheck,
+  LucideX,
+  LucideSparkles,
+  LucideCalendar,
+  LucideMessageSquare,
+  LucideLink,
+  LucideLock,
+  LucidePlus,
+  LucideChevronDown,
+  LucideLayers,
+  LucideLayoutDashboard,
+  LucideList,
+  LucideClipboardCheck,
+  LucideLayoutGrid,
+  LucideLineChart,
+  LucideClock,
+  LucideDownload,
+  LucideSlidersHorizontal,
+  LucideRefreshCw,
+  LucideAlertTriangle,
+  LucideCheckCircle,
+  LucideBell,
+  LucideHelpCircle,
+  LucideSearch,
+} from '@lucide/angular';
