@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+﻿import { Component, inject } from '@angular/core';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { CommonModule } from '@angular/common';
 import {
@@ -25,14 +25,14 @@ import { NewProjectDialogComponent } from '../new-project-dialog/new-project-dia
         <span class="tenant-badge">N</span>
         <div class="tenant-info">
           <span class="tenant-name">Northwind</span>
-          <span class="tenant-sub">Enterprise � 248 seats</span>
+          <span class="tenant-sub">Enterprise ï¿½ 248 seats</span>
         </div>
       </button>
 
       <nav class="nav">
         <div class="section-label">WORKSPACE</div>
         <button class="nav-item"><svg lucideLayoutDashboard [size]="17" class="nav-icon"></svg>Boards<span class="count">5</span></button>
-        <button class="nav-item"><svg lucideList [size]="17" class="nav-icon"></svg>Backlog<span class="count">42</span></button>
+        <button class="nav-item" [class.active]="state.activeView()==='backlog'" (click)="openBacklog()"><svg lucideList [size]="17" class="nav-icon"></svg>Backlog@if(state.backlog().totalCount>0){<span class="count">{{state.backlog().totalCount}}</span>}</button>
         <button class="nav-item"><svg lucideCalendar [size]="17" class="nav-icon"></svg>Sprints</button>
 
         <div class="section-label">VIEWS</div>
@@ -49,7 +49,7 @@ import { NewProjectDialogComponent } from '../new-project-dialog/new-project-dia
         <div class="section-label projects-label">PROJECTS <button class="new-proj-btn" (click)="showNewProject=true" title="New project">+</button></div>
 
         @if (state.loading() && state.projects().length === 0) {
-          <div class="nav-loading">Loading projects�</div>
+          <div class="nav-loading">Loading projectsï¿½</div>
         }
 
         @for (p of state.projects(); track p.id) {
@@ -129,6 +129,7 @@ export class SidebarComponent {
   manageTeamProjectName = '';
   readonly auth = inject(AuthService);
   private readonly colors = ['#4f46e5','#0d9488','#ea580c','#e11d48','#7c3aed','#2563eb','#16a34a'];
+
   openManageTeam(id: string, name: string, e: Event): void {
     e.stopPropagation();
     this.manageTeamProjectId = id;
@@ -136,17 +137,11 @@ export class SidebarComponent {
     this.showManageTeam = true;
   }
 
+  openBacklog(): void {
+    this.state.setView('backlog');
+    this.state.loadBacklog();
+  }
+
   logout(): void { this.auth.logout(); }
   projectColor(id: string): string { return this.colors[id.charCodeAt(0) % this.colors.length]; }
 }
-
-
-
-
-
-
-
-
-
-
-

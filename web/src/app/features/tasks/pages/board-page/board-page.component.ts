@@ -1,22 +1,26 @@
-﻿import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TaskState } from '../../store/task.state';
 import { KanbanColumnComponent } from '../../components/kanban-column/kanban-column.component';
 import { BoardHeaderComponent } from '../../components/board-header/board-header.component';
 import { NewTaskDialogComponent } from '../../components/new-task-dialog/new-task-dialog.component';
-import { TaskDto, TaskStatus } from '../../models/task.models';
+import { BacklogPageComponent } from '../../components/backlog-page/backlog-page.component';
+import { TaskDto } from '../../models/task.models';
 
 @Component({
   selector: 'ws-board-page',
   standalone: true,
-  imports: [CommonModule, KanbanColumnComponent, BoardHeaderComponent, NewTaskDialogComponent],
+  imports: [CommonModule, KanbanColumnComponent, BoardHeaderComponent, NewTaskDialogComponent, BacklogPageComponent],
   template: `
     <div class="page">
       <ws-board-header
         [project]="state.activeProject()"
+        [members]="state.members()"
         (newTask)="showDialog.set(true)" />
 
-      @if (state.loading()) {
+      @if (state.activeView() === 'backlog') {
+        <ws-backlog-page />
+      } @else if (state.loading()) {
         <div class="loading">
           <div class="spinner"></div>
           <span>Loading…</span>

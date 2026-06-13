@@ -35,6 +35,32 @@ export interface ProjectHealthDto {
   completedTasks: number; overdueTasks: number; blockedTasks: number; aiSummary: string;
 }
 
+
+export interface ProjectMemberDto {
+  employeeId: string;
+  role: string;
+  fullName: string;
+  email: string;
+  designation?: string;
+}
+
+export interface BacklogDto {
+  tasks:         TaskDto[];
+  totalCount:    number;
+  criticalCount: number;
+  highCount:     number;
+}
+
+export interface SprintSummaryDto {
+  id:                   string;
+  name:                 string;
+  status:               string;
+  endDate:              string;
+  daysRemaining:        number;
+  completionPercentage: number;
+  aiRiskLevel:          string;
+}
+
 export interface CreateProjectRequest {
   name: string; description: string | null; departmentId: string | null;
   startDate: string | null; targetEndDate: string | null;

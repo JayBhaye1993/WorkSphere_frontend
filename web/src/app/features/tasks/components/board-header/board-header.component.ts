@@ -1,7 +1,7 @@
 ﻿import { Component, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { LucideDownload, LucidePlus, LucideSlidersHorizontal, LucideChevronDown } from '@lucide/angular';
-import { ProjectDto } from '../../models/task.models';
+import { ProjectDto, ProjectMemberDto } from '../../models/task.models';
 
 @Component({
   selector: 'ws-board-header',
@@ -33,6 +33,25 @@ import { ProjectDto } from '../../models/task.models';
           <button class="chip">Priority: <strong>All</strong> <svg lucideChevronDown [size]="12"></svg></button>
           <button class="chip">Group: <strong>Status</strong> <svg lucideChevronDown [size]="12"></svg></button>
         </div>
+
+        @if (members().length > 0) {
+          <div class="avatar-strip">
+            @for (m of visibleMembers(); track m.employeeId) {
+              <div
+                class="avatar"
+                [style.background]="avatarColor(m.employeeId)"
+                [title]="m.fullName + ' · ' + m.role">
+                {{ initial(m.fullName) }}
+              </div>
+            }
+            @if (overflowCount() > 0) {
+              <div class="avatar avatar-overflow" [title]="overflowCount() + ' more members'">
+                +{{ overflowCount() }}
+              </div>
+            }
+          </div>
+        }
+
         <div class="view-toggle">
           <button class="toggle-btn active">Board</button>
           <button class="toggle-btn">List</button>
@@ -56,6 +75,11 @@ import { ProjectDto } from '../../models/task.models';
     .chip{display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 10px;border-radius:8px;border:1.5px solid #e2e8f0;background:white;font-size:12px;font-weight:500;color:#475569;cursor:pointer;}
     .chip strong{font-weight:700;color:#1e293b;}
     .chip:hover{border-color:#cbd5e1;background:#f8fafc;}
+    .avatar-strip{display:flex;align-items:center;margin-left:4px;}
+    .avatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white;border:2px solid white;margin-left:-6px;cursor:pointer;transition:transform .12s;flex-shrink:0;}
+    .avatar:first-child{margin-left:0;}
+    .avatar:hover{transform:scale(1.15);z-index:10;}
+    .avatar-overflow{background:#e2e8f0;color:#475569;font-size:10px;}
     .view-toggle{margin-left:auto;display:flex;background:#f1f5f9;border-radius:999px;padding:3px;gap:2px;}
     .toggle-btn{padding:4px 14px;border-radius:999px;border:none;background:none;font-size:12px;font-weight:500;color:#475569;cursor:pointer;}
     .toggle-btn.active{background:white;color:#4338ca;font-weight:600;box-shadow:0 1px 2px rgba(15,23,42,.06);}
@@ -63,7 +87,25 @@ import { ProjectDto } from '../../models/task.models';
 })
 export class BoardHeaderComponent {
   readonly project = input<ProjectDto | null>(null);
+  readonly members = input<ProjectMemberDto[]>([]);
   readonly newTask = output<void>();
+  private readonly COLORS = [
+    '#4f46e5','#0d9488','#ea580c','#e11d48',
+    '#7c3aed','#2563eb','#16a34a','#d97706','#0891b2'
+  ];
+  private readonly MAX_VISIBLE = 4;
+
+  visibleMembers() { return this.members().slice(0, this.MAX_VISIBLE); }
+  overflowCount()  { return Math.max(0, this.members().length - this.MAX_VISIBLE); }
+
+  avatarColor(employeeId: string): string {
+    return this.COLORS[employeeId.charCodeAt(0) % this.COLORS.length];
+  }
+
+  initial(fullName: string): string {
+    return fullName?.trim()[0]?.toUpperCase() ?? '?';
+  }
+
   fmtDate(d: string): string {
     return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
