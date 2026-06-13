@@ -33,7 +33,12 @@ import { NewProjectDialogComponent } from '../new-project-dialog/new-project-dia
         <div class="section-label">WORKSPACE</div>
         <button class="nav-item"><svg lucideLayoutDashboard [size]="17" class="nav-icon"></svg>Boards<span class="count">5</span></button>
         <button class="nav-item" [class.active]="state.activeView()==='backlog'" (click)="openBacklog()"><svg lucideList [size]="17" class="nav-icon"></svg>Backlog@if(state.backlog().totalCount>0){<span class="count">{{state.backlog().totalCount}}</span>}</button>
-        <button class="nav-item"><svg lucideCalendar [size]="17" class="nav-icon"></svg>Sprints</button>
+        <button class="nav-item" [class.active]="state.activeView()==='sprints'" (click)="openSprints()">
+          <svg lucideCalendar [size]="17" class="nav-icon"></svg>Sprints
+          @if (state.sprints().length > 0) {
+            <span class="count">{{ state.sprints().length }}</span>
+          }
+        </button>
 
         <div class="section-label">VIEWS</div>
         <button class="nav-item" [class.active]="state.activeView()==='board'" (click)="state.setView('board')">
@@ -140,6 +145,11 @@ export class SidebarComponent {
   openBacklog(): void {
     this.state.setView('backlog');
     this.state.loadBacklog();
+  }
+
+  openSprints(): void {
+    this.state.setView('sprints');
+    this.state.loadSprints();
   }
 
   logout(): void { this.auth.logout(); }

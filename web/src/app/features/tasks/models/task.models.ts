@@ -61,6 +61,14 @@ export interface SprintSummaryDto {
   aiRiskLevel:          string;
 }
 
+export interface CreateSprintRequest {
+  projectId:  string;
+  name:       string;
+  goal:       string | null;
+  startDate:  string;
+  endDate:    string;
+}
+
 export interface CreateProjectRequest {
   name: string; description: string | null; departmentId: string | null;
   startDate: string | null; targetEndDate: string | null;

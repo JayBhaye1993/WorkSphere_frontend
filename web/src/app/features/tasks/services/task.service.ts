@@ -1,12 +1,11 @@
 ﻿import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { ApiResponse } from '../../../core/models/api-response.model';
-
 import {
-  ProjectDto, TaskDto, ProjectMemberDto, BacklogDto,
-  CreateProjectRequest, CreateTaskRequest, UpdateTaskStatusRequest
+  ProjectDto, TaskDto, ProjectMemberDto, BacklogDto, SprintSummaryDto,
+  CreateProjectRequest, CreateTaskRequest, UpdateTaskStatusRequest, CreateSprintRequest
 } from '../models/task.models';
 
 @Injectable({ providedIn: 'root' })
@@ -14,6 +13,7 @@ export class TaskService {
   private readonly http = inject(HttpClient);
   private readonly base = environment.apiUrls.task;
 
+  // â”€â”€ Projects â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   getProjects(): Observable<ProjectDto[]> {
     return this.http
       .get<ApiResponse<ProjectDto[]>>(`${this.base}/api/v1/projects`)
@@ -32,6 +32,7 @@ export class TaskService {
       .pipe(map(r => r.data ?? []));
   }
 
+  // â”€â”€ Tasks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   getProjectTasks(projectId: string): Observable<TaskDto[]> {
     return this.http
       .get<ApiResponse<TaskDto[]>>(`${this.base}/api/v1/projects/${projectId}/tasks`)
@@ -50,16 +51,53 @@ export class TaskService {
       .pipe(map(r => r.data!));
   }
 
+  updateTaskStatus(req: UpdateTaskStatusRequest): Observable<TaskDto> {
+    return this.http
+      .patch<ApiResponse<TaskDto>>(`${this.base}/api/v1/tasks/${req.taskId}/status`, req)
+      .pipe(map(r => r.data!));
+  }
+
+  // â”€â”€ Backlog â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   getBacklog(projectId: string): Observable<BacklogDto> {
     return this.http
       .get<ApiResponse<BacklogDto>>(`${this.base}/api/v1/sprints/backlog?projectId=${projectId}`)
       .pipe(map(r => r.data ?? { tasks: [], totalCount: 0, criticalCount: 0, highCount: 0 }));
   }
 
-  updateTaskStatus(req: UpdateTaskStatusRequest): Observable<TaskDto> {
+  // â”€â”€ Sprints â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  getSprints(projectId: string): Observable<SprintSummaryDto[]> {
     return this.http
-      .patch<ApiResponse<TaskDto>>(`${this.base}/api/v1/tasks/${req.taskId}/status`, req)
+      .get<ApiResponse<SprintSummaryDto[]>>(`${this.base}/api/v1/sprints?projectId=${projectId}`)
+      .pipe(map(r => r.data ?? []));
+  }
+
+  getActiveSprint(projectId: string): Observable<SprintSummaryDto | null> {
+    return this.http
+      .get<ApiResponse<SprintSummaryDto | null>>(`${this.base}/api/v1/sprints/active?projectId=${projectId}`)
+      .pipe(map(r => r.data ?? null));
+  }
+
+  createSprint(req: CreateSprintRequest): Observable<SprintSummaryDto> {
+    return this.http
+      .post<ApiResponse<SprintSummaryDto>>(`${this.base}/api/v1/sprints`, req)
       .pipe(map(r => r.data!));
   }
-}
 
+  startSprint(sprintId: string): Observable<SprintSummaryDto> {
+    return this.http
+      .post<ApiResponse<SprintSummaryDto>>(`${this.base}/api/v1/sprints/${sprintId}/start`, {})
+      .pipe(map(r => r.data!));
+  }
+
+  completeSprint(sprintId: string): Observable<SprintSummaryDto> {
+    return this.http
+      .post<ApiResponse<SprintSummaryDto>>(`${this.base}/api/v1/sprints/${sprintId}/complete`, {})
+      .pipe(map(r => r.data!));
+  }
+
+  addTaskToSprint(sprintId: string, taskId: string): Observable<boolean> {
+    return this.http
+      .post<ApiResponse<boolean>>(`${this.base}/api/v1/sprints/${sprintId}/tasks`, { taskId })
+      .pipe(map(r => r.data ?? false));
+  }
+}

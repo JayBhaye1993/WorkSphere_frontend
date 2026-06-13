@@ -5,21 +5,35 @@ import { KanbanColumnComponent } from '../../components/kanban-column/kanban-col
 import { BoardHeaderComponent } from '../../components/board-header/board-header.component';
 import { NewTaskDialogComponent } from '../../components/new-task-dialog/new-task-dialog.component';
 import { BacklogPageComponent } from '../../components/backlog-page/backlog-page.component';
+import { SprintsPageComponent } from '../../components/sprints-page/sprints-page.component';
+import { CreateSprintDialogComponent } from '../../components/create-sprint-dialog/create-sprint-dialog.component';
 import { TaskDto } from '../../models/task.models';
 
 @Component({
   selector: 'ws-board-page',
   standalone: true,
-  imports: [CommonModule, KanbanColumnComponent, BoardHeaderComponent, NewTaskDialogComponent, BacklogPageComponent],
+  imports: [
+    CommonModule,
+    KanbanColumnComponent,
+    BoardHeaderComponent,
+    NewTaskDialogComponent,
+    BacklogPageComponent,
+    SprintsPageComponent,
+    CreateSprintDialogComponent
+  ],
   template: `
     <div class="page">
       <ws-board-header
         [project]="state.activeProject()"
         [members]="state.members()"
-        (newTask)="showDialog.set(true)" />
+        [activeSprint]="state.activeSprint()"
+        (newTask)="showTaskDialog.set(true)"
+        (newSprint)="showSprintDialog.set(true)" />
 
       @if (state.activeView() === 'backlog') {
         <ws-backlog-page />
+      } @else if (state.activeView() === 'sprints') {
+        <ws-sprints-page />
       } @else if (state.loading()) {
         <div class="loading">
           <div class="spinner"></div>
@@ -34,16 +48,21 @@ import { TaskDto } from '../../models/task.models';
               <ws-kanban-column
                 [col]="col"
                 (cardClick)="openTask($event)"
-                (addTask)="showDialog.set(true)" />
+                (addTask)="showTaskDialog.set(true)" />
             }
           </div>
         </div>
       }
 
       <ws-new-task-dialog
-        [visible]="showDialog()"
+        [visible]="showTaskDialog()"
         [projectId]="state.activeProjectId() ?? ''"
-        (close)="showDialog.set(false)" />
+        (close)="showTaskDialog.set(false)" />
+
+      <ws-create-sprint-dialog
+        [visible]="showSprintDialog()"
+        [projectId]="state.activeProjectId() ?? ''"
+        (close)="showSprintDialog.set(false)" />
     </div>
   `,
   styles: [`
@@ -57,8 +76,9 @@ import { TaskDto } from '../../models/task.models';
   `]
 })
 export class BoardPageComponent implements OnInit {
-  readonly state      = inject(TaskState);
-  readonly showDialog = signal(false);
+  readonly state            = inject(TaskState);
+  readonly showTaskDialog   = signal(false);
+  readonly showSprintDialog = signal(false);
 
   ngOnInit(): void { this.state.loadProjects(); }
   openTask(task: TaskDto): void { console.log('Open task:', task.id); }
