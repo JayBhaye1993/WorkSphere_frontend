@@ -1,16 +1,15 @@
-export const environment = {
+﻿export const environment = {
   production: false,
   apiUrls: {
-    identity: 'http://localhost:5000',
-    tenant:   'http://localhost:5001',
-    employee: 'http://localhost:5002',
-    hr:       'http://localhost:5003',
-    task:     'http://localhost:5004',
-    notification: 'http://localhost:5005',
-    document: 'http://localhost:5006',
-    workflow: 'http://localhost:5007',
-    ai:       'http://localhost:5008',
-    analytics:'http://localhost:5009',
+    identity: 'http://localhost:5010/api/identity',
+    tenant:   'http://localhost:5010/api/tenant',
+    employee: 'http://localhost:5010/api/employee',
+    hr:       'http://localhost:5010/api/hr',
+    task:     'http://localhost:5010/api/task',
+    notification: 'http://localhost:5010/api/notification',
+    document: 'http://localhost:5010/api/document',
+    workflow: 'http://localhost:5010/api/workflow',
+    ai:       'http://localhost:5010/api/ai',
+    analytics:'http://localhost:5010/api/analytics',
   }
 };
-

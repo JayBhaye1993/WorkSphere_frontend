@@ -1,4 +1,4 @@
-import { Injectable, computed, signal, inject } from '@angular/core';
+﻿import { Injectable, computed, signal, inject } from '@angular/core';
 import { TaskService } from '../services/task.service';
 import { ToastService } from '../../../core/services/toast.service';
 import {
@@ -75,7 +75,7 @@ export class TaskState {
           this._loading.set(false);
         }
       },
-      error: err => {
+      error: (err: any) => {
         this._error.set('Failed to load projects: ' + err.message);
         this._loading.set(false);
       }
@@ -90,11 +90,11 @@ export class TaskState {
     this._activeSprint.set(null);
 
     this.svc.getProjectTasks(id).subscribe({
-      next: tasks => {
+      next: (tasks: any) => {
         this._tasks.set(tasks);
         this._loading.set(false);
       },
-      error: err => {
+      error: (err: any) => {
         this._error.set('Failed to load tasks: ' + err.message);
         this._loading.set(false);
       }
@@ -115,8 +115,8 @@ export class TaskState {
   loadMyTasks(): void {
     this._loading.set(true);
     this.svc.getMyTasks().subscribe({
-      next: tasks => { this._tasks.set(tasks); this._loading.set(false); },
-      error: err  => { this._error.set(err.message); this._loading.set(false); }
+      next: (tasks: any) => { this._tasks.set(tasks); this._loading.set(false); },
+      error: (err: any) => { this._error.set(err.message); this._loading.set(false); }
     });
   }
 
@@ -147,11 +147,11 @@ export class TaskState {
 
   createSprint(req: CreateSprintRequest): void {
     this.svc.createSprint(req).subscribe({
-      next: sprint => {
+      next: (sprint: any) => {
         this._sprints.update(l => [sprint, ...l]);
         this.toast.show(`Sprint "${sprint.name}" created`);
       },
-      error: err => {
+      error: (err: any) => {
         this.toast.show('Failed to create sprint', 'error');
       }
     });
@@ -159,7 +159,7 @@ export class TaskState {
 
   startSprint(sprintId: string): void {
     this.svc.startSprint(sprintId).subscribe({
-      next: sprint => {
+      next: (sprint: any) => {
         this._activeSprint.set(sprint);
         this._sprints.update(l => l.map(s => s.id === sprintId ? sprint : s));
         this.toast.show(`Sprint "${sprint.name}" started`);
@@ -199,7 +199,7 @@ export class TaskState {
 
   completeSprint(sprintId: string): void {
     this.svc.completeSprint(sprintId).subscribe({
-      next: sprint => {
+      next: (sprint: any) => {
         this._activeSprint.set(null);
         this._sprints.update(l => l.map(s => s.id === sprintId ? sprint : s));
         this.toast.show(`Sprint "${sprint.name}" completed`);
@@ -225,7 +225,7 @@ export class TaskState {
         this._tasks.update(l => [...l, task]);
         this.toast.show('Task created');
       },
-      error: err => {
+      error: (err: any) => {
         this._error.set(err.message);
         this.toast.show('Failed to create task', 'error');
       }
@@ -245,8 +245,8 @@ export class TaskState {
     ));
     this.toast.show(`Moved to ${col.label}`);
 
-    this.svc.updateTaskStatus({ taskId, newStatus, newPosition: 1000 }).subscribe({
-      next: updated => this._tasks.update(l =>
+    this.svc.updateTaskStatus(taskId, newStatus, 1000).subscribe({
+      next: (updated: any) => this._tasks.update(l =>
         l.map(t => t.id === updated.id ? { ...updated } : t)
       ),
       error: () => {
@@ -263,7 +263,7 @@ export class TaskState {
     this._tasks.update(l => l.map(t =>
       t.id === taskId ? { ...t, priority: newPri, aiSuggestedPriority: null, aiFlag: false } : t
     ));
-    this.toast.show(`AI suggestion applied → ${newPri}`);
+    this.toast.show(`AI suggestion applied â†’ ${newPri}`);
   }
 
   dismissAiSuggestion(taskId: string): void {
@@ -273,3 +273,7 @@ export class TaskState {
     this.toast.show('Suggestion dismissed', 'info');
   }
 }
+
+
+
+
