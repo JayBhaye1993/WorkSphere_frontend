@@ -7,6 +7,7 @@ import { NewTaskDialogComponent } from '../../components/new-task-dialog/new-tas
 import { BacklogPageComponent } from '../../components/backlog-page/backlog-page.component';
 import { SprintsPageComponent } from '../../components/sprints-page/sprints-page.component';
 import { CreateSprintDialogComponent } from '../../components/create-sprint-dialog/create-sprint-dialog.component';
+import { TaskDetailPanelComponent } from '../../components/task-detail-panel/task-detail-panel.component';
 import { TaskDto } from '../../models/task.models';
 
 @Component({
@@ -19,7 +20,8 @@ import { TaskDto } from '../../models/task.models';
     NewTaskDialogComponent,
     BacklogPageComponent,
     SprintsPageComponent,
-    CreateSprintDialogComponent
+    CreateSprintDialogComponent,
+    TaskDetailPanelComponent
   ],
   template: `
     <div class="page">
@@ -63,6 +65,10 @@ import { TaskDto } from '../../models/task.models';
         [visible]="showSprintDialog()"
         [projectId]="state.activeProjectId() ?? ''"
         (close)="showSprintDialog.set(false)" />
+
+      <ws-task-detail-panel
+        [taskId]="selectedTaskId()"
+        (close)="selectedTaskId.set(null)" />
     </div>
   `,
   styles: [`
@@ -79,7 +85,11 @@ export class BoardPageComponent implements OnInit {
   readonly state            = inject(TaskState);
   readonly showTaskDialog   = signal(false);
   readonly showSprintDialog = signal(false);
+  readonly selectedTaskId   = signal<string | null>(null);
 
   ngOnInit(): void { this.state.loadProjects(); }
-  openTask(task: TaskDto): void { console.log('Open task:', task.id); }
+
+  openTask(task: TaskDto): void {
+    this.selectedTaskId.set(task.id);
+  }
 }

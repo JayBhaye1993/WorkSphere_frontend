@@ -1,4 +1,4 @@
-export type TaskPriority  = 'Critical' | 'High' | 'Medium' | 'Low';
+﻿export type TaskPriority  = 'Critical' | 'High' | 'Medium' | 'Low';
 export type TaskStatus    = 'ToDo' | 'InProgress' | 'Blocked' | 'InReview' | 'Done';
 export type ProjectStatus = 'Active' | 'OnHold' | 'Completed' | 'Cancelled';
 export type DueState      = '' | 'soon' | 'over';
@@ -59,6 +59,31 @@ export interface SprintSummaryDto {
   daysRemaining:        number;
   completionPercentage: number;
   aiRiskLevel:          string;
+}
+
+export interface TaskCommentDto {
+  id:         string;
+  authorId:   string;
+  authorName: string | null;
+  body:       string;
+  createdAt:  string;
+  updatedAt:  string | null;
+}
+
+export interface TimeLogDto {
+  id:           string;
+  loggedBy:     string;
+  loggedByName: string | null;
+  loggedAt:     string;
+  hours:        number;
+  description:  string | null;
+}
+
+export interface TaskDetailDto extends TaskDto {
+  assigneeName: string | null;
+  reporterName: string | null;
+  comments:     TaskCommentDto[];
+  timeLogs:     TimeLogDto[];
 }
 
 export interface CreateSprintRequest {
@@ -125,3 +150,52 @@ export const TAG_CONFIG: Record<string, { text: string; bg: string }> = {
 export const WORKLOAD_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
 
+
+export interface SubtaskDto {
+  id:           string;
+  taskId:       string;
+  title:        string;
+  done:         boolean;
+  assigneeId:   string | null;
+  assigneeName: string | null;
+  dueDate:      string | null;
+  order:        number;
+  createdAt:    string;
+}
+
+export interface TaskActivityDto {
+  id:        string;
+  taskId:    string;
+  actorId:   string;
+  actorName: string;
+  eventType: string;
+  fieldName: string | null;
+  fromValue: string | null;
+  toValue:   string | null;
+  createdAt: string;
+}
+
+export interface UpdateTaskRequest {
+  taskId:          string;
+  title:           string;
+  description:     string | null;
+  assigneeId:      string | null;
+  dueDate:         string | null;
+  priority:        string;
+  estimatedHours:  number | null;
+  tags:            string[];
+}
+
+export interface LogTimeRequest {
+  taskId:      string;
+  loggedAt:    string;
+  hours:       number;
+  description: string | null;
+}
+
+export interface CreateSubtaskRequest {
+  title:      string;
+  assigneeId: string | null;
+  dueDate:    string | null;
+  order:      number;
+}
