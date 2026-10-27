@@ -18,15 +18,15 @@ import { LucideCalendarDays, LucideEllipsis, LucideHouse, LucideSquareKanban, Lu
       <nav aria-label="Main"
            class="lg:order-first shrink-0 bg-white border-t lg:border-t-0 lg:border-r border-slate-200
                   grid grid-cols-5 lg:flex lg:flex-col lg:w-[84px] lg:pt-4 lg:gap-1 pb-[env(safe-area-inset-bottom)]">
-        <a routerLink="/home" routerLinkActive="is-active" class="nav-item">
+        <a routerLink="/home" routerLinkActive="is-active" ariaCurrentWhenActive="page" class="nav-item">
           <svg lucideHouse [size]="22" aria-hidden="true"></svg>Home</a>
-        <a routerLink="/tasks" routerLinkActive="is-active" class="nav-item">
+        <a routerLink="/tasks" routerLinkActive="is-active" ariaCurrentWhenActive="page" class="nav-item">
           <svg lucideSquareKanban [size]="22" aria-hidden="true"></svg>Tasks</a>
-        <a routerLink="/people" routerLinkActive="is-active" class="nav-item">
+        <a routerLink="/people" routerLinkActive="is-active" ariaCurrentWhenActive="page" class="nav-item">
           <svg lucideUsers [size]="22" aria-hidden="true"></svg>People</a>
-        <a routerLink="/time-off" routerLinkActive="is-active" class="nav-item">
+        <a routerLink="/time-off" routerLinkActive="is-active" ariaCurrentWhenActive="page" class="nav-item">
           <svg lucideCalendarDays [size]="22" aria-hidden="true"></svg>Time off</a>
-        <a routerLink="/more" routerLinkActive="is-active" class="nav-item">
+        <a routerLink="/more" routerLinkActive="is-active" ariaCurrentWhenActive="page" class="nav-item">
           <svg lucideEllipsis [size]="22" aria-hidden="true"></svg>More</a>
       </nav>
     </div>

@@ -38,7 +38,7 @@ const PAGE = 30;
             @for (c of chips(); track c.id) {
               <button type="button" (click)="pick(c.id)" [attr.aria-pressed]="dept() === c.id"
                       class="chip" [class.chip-on]="dept() === c.id">
-                {{ c.name }}@if (c.count !== null) {<span class="mono ml-1.5 opacity-80">{{ c.count }}</span>}
+                {{ c.name }}@if (c.count !== null) {<span class="sr-only">, </span><span class="mono ml-1.5 opacity-80">{{ c.count }}</span>}
               </button>
             }
           </div>
