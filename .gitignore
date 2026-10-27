@@ -1,6 +1,8 @@
 ﻿node_modules/
 dist/
 .angular/
-android/
-ios/
+# Old React Native project only. The Capacitor app in web/android (and later web/ios) is committed;
+# its own .gitignore keeps build output and copied web assets out.
+mobile/android/
+mobile/ios/
 *.log
