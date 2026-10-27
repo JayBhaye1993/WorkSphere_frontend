@@ -5,7 +5,7 @@ import { ApiResponse } from '../../core/models/api-response.model';
 import { fileNameFrom } from '../../core/util/download';
 import { ApiService } from '../../core/api/api.service';
 import { environment } from '../../../environments/environment';
-import { ChangeEntry, ExitCase, ExitInput, ExitReason, ImportPreview, ImportResult, CreateEmployee, CustomField, JobRecord, Department, Designation, DirectoryEntry, Employee, EmployeeSettings, EmploymentType, Grade, Location, Paged, UpdateEmployee, UpdateMyProfile } from '../../core/models/people.models';
+import { OrgPerson, ChangeEntry, ExitCase, ExitInput, ExitReason, ImportPreview, ImportResult, CreateEmployee, CustomField, JobRecord, Department, Designation, DirectoryEntry, Employee, EmployeeSettings, EmploymentType, Grade, Location, Paged, UpdateEmployee, UpdateMyProfile } from '../../core/models/people.models';
 
 @Injectable({ providedIn: 'root' })
 export class PeopleService {
@@ -81,6 +81,9 @@ export class PeopleService {
   addExitTask(id: string, title: string, owner: string): Observable<ExitCase> { return this.api.post<ExitCase>(`${this.base}/employees/${id}/exit/tasks`, { title, owner }); }
   updateExitTask(id: string, taskId: string, body: { done?: boolean; note?: string }): Observable<ExitCase> { return this.api.patch<ExitCase>(`${this.base}/employees/${id}/exit/tasks/${taskId}`, body); }
   deleteExitTask(id: string, taskId: string): Observable<ExitCase> { return this.api.delete<ExitCase>(`${this.base}/employees/${id}/exit/tasks/${taskId}`); }
+  /** Everyone active, flat, with team sizes. */
+  org(): Observable<OrgPerson[]> { return this.api.get<OrgPerson[]>(`${this.base}/employees/org`); }
+
   exitReasons(): Observable<ExitReason[]> { return this.api.get<ExitReason[]>(`${this.base}/exit-reasons`); }
 
   // ── Excel: export, template, import ──

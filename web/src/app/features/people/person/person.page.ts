@@ -53,6 +53,9 @@ interface Row { label: string; value?: string; chips?: string[]; mono?: boolean;
             }
             <a [href]="'mailto:' + c.email" class="action"><svg lucideMail [size]="18" aria-hidden="true"></svg>Email</a>
           </div>
+          @if (c.status !== 'Exited') {
+            <a [routerLink]="['/people/org']" [queryParams]="{ focus: c.id }" class="mt-1 min-h-[44px] flex items-center text-[14px] font-semibold">See in org chart</a>
+          }
           @if (c.leavingOn) {
             <p class="mt-2 mb-0 w-full px-3 py-2 rounded-10 text-[14px] font-semibold" [class.banner-leaving]="c.status !== 'Exited'" [class.banner-left]="c.status === 'Exited'" role="status">
               {{ c.status === 'Exited' ? 'Left on ' + day(c.leavingOn) : 'Leaving on ' + day(c.leavingOn) }}</p>

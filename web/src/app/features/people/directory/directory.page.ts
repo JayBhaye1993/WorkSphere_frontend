@@ -2,7 +2,7 @@ import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { Subject, catchError, debounceTime, distinctUntilChanged, of, switchMap, tap } from 'rxjs';
-import { LucideChevronRight, LucideDownload, LucideSearch, LucideUpload, LucideUserPlus, LucideX } from '@lucide/angular';
+import { LucideNetwork, LucideChevronRight, LucideDownload, LucideSearch, LucideUpload, LucideUserPlus, LucideX } from '@lucide/angular';
 import { firstValueFrom } from 'rxjs';
 import { ToastService } from '../../../core/services/toast.service';
 import { saveBlob } from '../../../core/util/download';
@@ -18,7 +18,7 @@ const PAGE = 30;
 @Component({
   selector: 'ws-people-directory',
   standalone: true,
-  imports: [RouterLink, AvatarComponent, LucideSearch, LucideChevronRight, LucideX, LucideUserPlus, LucideDownload, LucideUpload],
+  imports: [RouterLink, AvatarComponent, LucideSearch, LucideChevronRight, LucideX, LucideUserPlus, LucideDownload, LucideUpload, LucideNetwork],
   template: `
     <div class="mx-auto max-w-[760px]">
       <header class="sticky top-0 z-10 bg-white border-b border-slate-200 px-4 pt-5 pb-3 flex flex-col gap-3">
@@ -27,6 +27,7 @@ const PAGE = 30;
             @if (allTotal() !== null) { <span class="mono text-[16px] font-medium text-slate-600">{{ allTotal() }}</span> }
           </h1>
           <span class="flex-1"></span>
+          <a routerLink="/people/org" aria-label="Org chart" title="Org chart" class="icon-btn"><svg lucideNetwork [size]="19" aria-hidden="true"></svg></a>
           @if (canExport) {
             <button type="button" (click)="export()" [disabled]="exporting()" aria-label="Export to Excel" title="Export to Excel"
                     class="icon-btn"><svg lucideDownload [size]="19" aria-hidden="true"></svg></button>
@@ -35,8 +36,8 @@ const PAGE = 30;
             <a routerLink="/people/import" aria-label="Import from Excel" title="Import from Excel" class="icon-btn"><svg lucideUpload [size]="19" aria-hidden="true"></svg></a>
           }
           @if (canAdd) {
-            <a routerLink="/people/new" class="h-10 px-3.5 rounded-10 bg-indigo-600 text-white text-[14px] font-semibold flex items-center gap-1.5 hover:bg-indigo-700">
-              <svg lucideUserPlus [size]="18" aria-hidden="true"></svg>Add person</a>
+            <a routerLink="/people/new" aria-label="Add person" class="h-10 min-w-10 px-2.5 sm:px-3.5 rounded-10 bg-indigo-600 text-white text-[14px] font-semibold flex items-center justify-center gap-1.5 hover:bg-indigo-700">
+              <svg lucideUserPlus [size]="18" aria-hidden="true"></svg><span class="hidden sm:inline">Add person</span></a>
           }
         </div>
         <label class="flex items-center gap-2 h-11 px-3 rounded-12 border border-slate-300 bg-white focus-within:border-indigo-600 focus-within:ring-2 focus-within:ring-indigo-100">

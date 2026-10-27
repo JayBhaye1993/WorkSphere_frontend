@@ -143,6 +143,13 @@ export interface ImportRow { row: number; action: 'Add' | 'Update' | 'Unchanged'
 export interface ImportPreview { total: number; toAdd: number; toUpdate: number; unchanged: number; withErrors: number; rows: ImportRow[]; ignoredColumns: string[]; errorFileBase64: string | null; }
 export interface ImportResult { added: number; updated: number; unchanged: number; failed: number; failures: ImportRow[]; errorFileBase64: string | null; }
 
+/** One person on the org chart (GET /employees/org). ManagerId null = at the top, or manager not set. */
+export interface OrgPerson {
+  id: string; fullName: string; employeeCode: string; designationName: string | null; departmentName: string | null;
+  topDepartmentId: string | null; topDepartmentName: string | null; locationName: string | null; profilePhotoUrl: string | null;
+  managerId: string | null; directReports: number; teamSize: number;
+}
+
 export const CHANGE_REASONS = ['Promotion', 'Transfer', 'Manager change', 'Role change', 'Relocation', 'Correction'] as const;
 
 export interface Paged<T> {
