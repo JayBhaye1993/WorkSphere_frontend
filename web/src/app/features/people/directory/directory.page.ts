@@ -52,6 +52,11 @@ const PAGE = 30;
             </button>
           }
         </label>
+        @if (pending() > 0) {
+          <a routerLink="/people/resignations" class="flex items-center gap-2 min-h-[44px] px-3 rounded-12 bg-amber-50 border border-amber-200 text-[14px] font-semibold text-amber-900 no-underline">
+            <span class="flex-1">{{ pending() === 1 ? '1 resignation is' : pending() + ' resignations are' }} waiting for you</span>
+            <svg lucideChevronRight [size]="16" aria-hidden="true"></svg></a>
+        }
         @if (canExit) {
           <div role="group" aria-label="Show" class="grid grid-cols-3 p-1 rounded-12 bg-slate-100">
             @for (o of shows; track o.id) {
@@ -161,6 +166,8 @@ export class DirectoryPage {
   /** Export makes sense for managers (their team) and HR; an employee would only get themselves. */
   readonly canExport = ['team', 'all'].includes(this.auth.scopeOf('employees.view') ?? '');
   readonly exporting = signal(false);
+  /** Resignations the viewer can decide on (HR or managers). */
+  readonly pending = signal(0);
   private readonly toast = inject(ToastService);
 
   readonly searchText = signal('');
@@ -213,6 +220,8 @@ export class DirectoryPage {
     this.people.departments().pipe(catchError(() => of([] as Department[])), takeUntilDestroyed())
       .subscribe(d => this.departments.set(d));
     this.reload$.next();
+    if (this.canExit || this.auth.scopeOf('employees.view') === 'team')
+      this.people.pendingResignations().pipe(catchError(() => of([])), takeUntilDestroyed()).subscribe(x => this.pending.set(x.length));
   }
 
   typed(v: string) { this.searchText.set(v); this.typing$.next(v.trim()); }

@@ -129,10 +129,15 @@ export interface ExitTask { id: string; title: string; owner: string; done: bool
 export interface ExitCase {
   id: string; employeeId: string; exitType: string; noticeDate: string; lastWorkingDay: string;
   noticePeriodDays: number; shortenedByDays: number; reasonId: string | null; reasonName: string | null;
-  note: string | null; rehireEligible: boolean | null; status: 'Serving' | 'Completed' | 'Withdrawn';
+  note: string | null; rehireEligible: boolean | null; status: 'Requested' | 'Serving' | 'Completed' | 'Withdrawn' | 'Declined';
   startedByName: string; startedAt: string; closedAt: string | null; closedByName: string | null; withdrawNote: string | null;
   daysLeft: number; tasksDone: number; tasks: ExitTask[]; canManage: boolean;
+  /** Self-resignation: what they asked for, in their words, and the decision. */
+  requestedLastDay: string | null; employeeNote: string | null; decisionNote: string | null; decidedByName: string | null;
+  /** The viewer may accept or decline this pending resignation. */
+  canDecide: boolean;
 }
+export interface PendingResignation { employeeId: string; fullName: string; designationName: string | null; proposedLastDay: string; submittedAt: string; reasonName: string | null; employeeNote: string | null; noticePeriodDays: number; }
 export interface ExitInput { exitType: string; noticeDate: string; lastWorkingDay: string; reasonId: string | null; note: string | null; rehireEligible?: boolean | null; }
 export interface ExitReason { id: string; name: string; sortOrder: number; usageCount: number; }
 export const EXIT_TYPES = ['Resignation', 'Termination', 'Retirement', 'Contract end', 'Other'] as const;

@@ -3,7 +3,9 @@ import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom, catchError, of } from 'rxjs';
 import { LucideArrowLeft, LucideLock } from '@lucide/angular';
 import { PeopleService } from '../people.service';
-import { CustomField, Employee, UpdateMyProfile } from '../../../core/models/people.models';
+import { CustomField, Employee, ExitCase, UpdateMyProfile } from '../../../core/models/people.models';
+import { ExitCardComponent } from '../exit/exit-card.component';
+import { fmtDay } from '../exit/exit-dates';
 import { AvatarComponent } from '../../../shared/avatar.component';
 import { CustomFieldInputComponent } from '../../../shared/custom-field-input.component';
 import { ToastService } from '../../../core/services/toast.service';
@@ -17,7 +19,7 @@ interface Form { phone: string; dateOfBirth: string; gender: string; address: st
 /** Your own details: what you may change yourself, and what HR keeps (read-only). */
 @Component({
   standalone: true,
-  imports: [RouterLink, AvatarComponent, CustomFieldInputComponent, LucideArrowLeft, LucideLock],
+  imports: [RouterLink, AvatarComponent, CustomFieldInputComponent, ExitCardComponent, LucideArrowLeft, LucideLock],
   template: `
     <div class="mx-auto max-w-[640px] min-h-full flex flex-col">
       <header class="sticky top-0 z-10 h-14 px-1 bg-white border-b border-slate-200 flex items-center gap-1">
@@ -88,6 +90,28 @@ interface Form { phone: string; dateOfBirth: string; gender: string; address: st
             <a [routerLink]="['/people', e.id, 'history']" class="self-start min-h-[44px] flex items-center text-[14px] font-semibold">See your career and change history</a>
           </section>
 
+          @if (exit(); as x) {
+            @if (x.status === 'Requested') {
+              <section class="p-4 rounded-14 bg-amber-50 border border-amber-200 flex flex-col gap-2" aria-live="polite">
+                <h2 class="m-0 text-[15px] font-bold text-amber-900">Resignation sent</h2>
+                <p class="m-0 text-[14px] text-amber-900">Sent {{ day(x.noticeDate) }} · proposed last day <b>{{ day(x.requestedLastDay ?? x.lastWorkingDay) }}</b>. Waiting for {{ e.managerName ?? 'HR' }} to accept it.</p>
+                @if (x.employeeNote) { <p class="m-0 text-[13px] text-amber-900">Your message: “{{ x.employeeNote }}”</p> }
+                <button type="button" (click)="withdraw()" [disabled]="withdrawing()" class="self-start h-10 px-4 rounded-10 bg-white border border-amber-300 text-[14px] font-semibold text-amber-900 cursor-pointer">{{ withdrawing() ? 'Withdrawing…' : 'Withdraw resignation' }}</button>
+              </section>
+            } @else if (x.status === 'Serving') {
+              <ws-exit-card [exit]="x" [name]="e.fullName.split(' ')[0]" />
+            } @else if (x.status === 'Declined') {
+              <section class="p-4 rounded-14 bg-slate-100 flex flex-col gap-1.5">
+                <h2 class="m-0 text-[15px] font-bold">Resignation not accepted</h2>
+                <p class="m-0 text-[14px] text-slate-700">{{ x.decidedByName }}: “{{ x.decisionNote }}”</p>
+                <a routerLink="/more/profile/resign" class="self-start min-h-[44px] flex items-center text-[14px] font-semibold text-red-700">Resign again</a>
+              </section>
+            }
+          }
+          @if (!exit() || exit()!.status === 'Withdrawn' || exit()!.status === 'Completed') {
+            <a routerLink="/more/profile/resign" class="self-center min-h-[44px] px-4 flex items-center text-[14px] font-semibold text-red-700 no-underline rounded-10 hover:bg-red-50">Resign</a>
+          }
+
           <div class="sticky bottom-0 -mx-4 px-4 py-3 bg-white border-t border-slate-200 mt-auto">
             <button type="submit" class="ws-btn ws-btn-primary w-full" [disabled]="!dirty() || saving() || invalid()">
               {{ saving() ? 'Saving…' : dirty() ? 'Save changes' : 'No changes' }}
@@ -140,6 +164,17 @@ export class MyProfilePage {
     return JSON.stringify([this.f(), editable]);
   }
 
+  readonly exit = signal<ExitCase | null>(null);
+  readonly withdrawing = signal(false);
+  day(d: string) { return fmtDay(d); }
+
+  async withdraw() {
+    this.withdrawing.set(true);
+    try { this.exit.set(await firstValueFrom(this.people.withdrawMyResignation())); this.toast.show('Resignation withdrawn.'); }
+    catch (e) { this.toast.show(errorText(e, 'Could not withdraw your resignation.')); }
+    finally { this.withdrawing.set(false); }
+  }
+
   private async load() {
     try {
       const [me, fields] = await Promise.all([
@@ -148,6 +183,7 @@ export class MyProfilePage {
       ]);
       this.fields.set(fields);
       this.fill(me);
+      this.exit.set(await firstValueFrom(this.people.exit(me.id).pipe(catchError(() => of(null)))));
     } catch (e) {
       this.loadError.set(errorText(e, 'Could not load your profile.'));
     } finally { this.loading.set(false); }

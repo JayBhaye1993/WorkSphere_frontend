@@ -64,7 +64,7 @@ interface Row { label: string; value?: string; chips?: string[]; mono?: boolean;
 
         <div class="flex flex-col gap-3 px-4 pt-3">
           @if (exit(); as x) {
-            @if (x.status !== 'Withdrawn') { <ws-exit-card [exit]="x" [name]="firstName()" (changed)="exitChanged($event)" /> }
+            @if (x.status !== 'Withdrawn' && x.status !== 'Declined') { <ws-exit-card [exit]="x" [name]="firstName()" (changed)="exitChanged($event)" /> }
           }
           @if (chain().length) {
             <section class="card">
@@ -167,7 +167,7 @@ export class PersonPage {
   readonly exit = signal<ExitCase | null>(null);
   /** HR, someone still here, no exit in progress, and not their own profile. */
   readonly canStartExit = computed(() => this.canExit && !!this.full() && this.card()?.status !== 'Exited'
-    && (!this.exit() || this.exit()!.status === 'Withdrawn') && this.card()?.email !== this.auth.user()?.email);
+    && (!this.exit() || this.exit()!.status === 'Withdrawn' || this.exit()!.status === 'Declined') && this.card()?.email !== this.auth.user()?.email);
 
   readonly firstName = computed(() => this.card()?.fullName.split(' ')[0] ?? '');
   readonly titleLine = computed(() => [this.card()?.designationName, this.card()?.departmentName].filter(Boolean).join(' · '));

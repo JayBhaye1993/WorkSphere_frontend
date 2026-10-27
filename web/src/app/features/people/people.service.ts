@@ -5,7 +5,7 @@ import { ApiResponse } from '../../core/models/api-response.model';
 import { fileNameFrom } from '../../core/util/download';
 import { ApiService } from '../../core/api/api.service';
 import { environment } from '../../../environments/environment';
-import { OrgPerson, ChangeEntry, ExitCase, ExitInput, ExitReason, ImportPreview, ImportResult, CreateEmployee, CustomField, JobRecord, Department, Designation, DirectoryEntry, Employee, EmployeeSettings, EmploymentType, Grade, Location, Paged, UpdateEmployee, UpdateMyProfile } from '../../core/models/people.models';
+import { OrgPerson, PendingResignation, ChangeEntry, ExitCase, ExitInput, ExitReason, ImportPreview, ImportResult, CreateEmployee, CustomField, JobRecord, Department, Designation, DirectoryEntry, Employee, EmployeeSettings, EmploymentType, Grade, Location, Paged, UpdateEmployee, UpdateMyProfile } from '../../core/models/people.models';
 
 @Injectable({ providedIn: 'root' })
 export class PeopleService {
@@ -83,6 +83,13 @@ export class PeopleService {
   deleteExitTask(id: string, taskId: string): Observable<ExitCase> { return this.api.delete<ExitCase>(`${this.base}/employees/${id}/exit/tasks/${taskId}`); }
   /** Everyone active, flat, with team sizes. */
   org(): Observable<OrgPerson[]> { return this.api.get<OrgPerson[]>(`${this.base}/employees/org`); }
+
+  // ── Resignation ──
+  resign(body: { lastWorkingDay: string; reasonId: string | null; note: string | null }): Observable<ExitCase> { return this.api.post<ExitCase>(`${this.base}/employees/me/resignation`, body); }
+  withdrawMyResignation(): Observable<ExitCase> { return this.api.post<ExitCase>(`${this.base}/employees/me/resignation/withdraw`, {}); }
+  pendingResignations(): Observable<PendingResignation[]> { return this.api.get<PendingResignation[]>(`${this.base}/employees/resignations`); }
+  acceptResignation(id: string, lastWorkingDay: string, note: string | null): Observable<ExitCase> { return this.api.post<ExitCase>(`${this.base}/employees/${id}/exit/accept`, { lastWorkingDay, note }); }
+  declineResignation(id: string, reason: string): Observable<ExitCase> { return this.api.post<ExitCase>(`${this.base}/employees/${id}/exit/decline`, { reason }); }
 
   exitReasons(): Observable<ExitReason[]> { return this.api.get<ExitReason[]>(`${this.base}/exit-reasons`); }
 

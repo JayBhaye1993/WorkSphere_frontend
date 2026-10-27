@@ -8,7 +8,7 @@ import { ToastService } from '../../../core/services/toast.service';
 import { errorText } from '../people-errors';
 import { fmtDay } from './exit-dates';
 
-type Sheet = { kind: 'complete' } | { kind: 'withdraw' } | { kind: 'add' } | { kind: 'task'; task: ExitTask } | null;
+type Sheet = { kind: 'complete' } | { kind: 'withdraw' } | { kind: 'add' } | { kind: 'task'; task: ExitTask } | { kind: 'accept' } | { kind: 'decline' } | null;
 
 /**
  * A person's exit on their profile: dates, notice, reason, and the offboarding checklist.
@@ -23,8 +23,8 @@ type Sheet = { kind: 'complete' } | { kind: 'withdraw' } | { kind: 'add' } | { k
     @let x = exit();
     <section class="card" aria-labelledby="exit-h">
       <div class="flex items-center gap-2">
-        <h2 id="exit-h" class="card-h flex-1">{{ x.status === 'Completed' ? 'Exit' : 'Leaving' }}</h2>
-        @if (x.canManage) {
+        <h2 id="exit-h" class="card-h flex-1" [class.!text-amber-800]="x.status === 'Requested'">{{ x.status === 'Requested' ? 'Resignation pending' : x.status === 'Completed' ? 'Exit' : 'Leaving' }}</h2>
+        @if (x.canManage && x.status !== 'Requested') {
           <a [routerLink]="['/people', x.employeeId, 'exit']" class="text-[14px] font-semibold min-h-[44px] -my-3 flex items-center">{{ x.status === 'Completed' ? 'Edit details' : 'Change' }}</a>
         }
       </div>
@@ -32,14 +32,20 @@ type Sheet = { kind: 'complete' } | { kind: 'withdraw' } | { kind: 'add' } | { k
       <dl class="facts">
         <dt>Type</dt><dd>{{ x.exitType }}</dd>
         <dt>{{ x.exitType === 'Resignation' ? 'Resigned on' : 'Notice given' }}</dt><dd>{{ day(x.noticeDate) }}</dd>
+        @if (x.status === 'Requested') {
+          <dt>Proposed last day</dt><dd class="font-semibold">{{ day(x.requestedLastDay ?? x.lastWorkingDay) }}</dd>
+        } @else {
         <dt>{{ x.status === 'Completed' ? 'Left on' : 'Last day' }}</dt>
         <dd><span class="font-semibold">{{ day(x.lastWorkingDay) }}</span>
           @if (x.status === 'Serving') { <span class="text-slate-600"> · {{ x.daysLeft === 0 ? 'today' : x.daysLeft === 1 ? '1 day left' : x.daysLeft + ' days left' }}</span> }</dd>
+        }
         @if (x.noticePeriodDays) {
           <dt>Notice</dt><dd>{{ x.noticePeriodDays }} days@if (x.shortenedByDays) { <span class="text-amber-800"> · shortened by {{ x.shortenedByDays }}</span> }</dd>
         }
         @if (x.reasonName) { <dt>Reason</dt><dd>{{ x.reasonName }}</dd> }
-        @if (x.canManage) {
+        @if (x.employeeNote) { <dt>In their words</dt><dd class="whitespace-pre-line">“{{ x.employeeNote }}”</dd> }
+        @if (x.decidedByName && x.status !== 'Requested') { <dt>Accepted by</dt><dd>{{ x.decidedByName }}@if (x.decisionNote) { · “{{ x.decisionNote }}” }</dd> }
+        @if (x.canManage && x.status !== 'Requested') {
           <dt>Rehire</dt><dd>{{ x.rehireEligible === true ? 'Yes' : x.rehireEligible === false ? 'No' : 'Not decided' }}</dd>
           @if (x.note) { <dt class="flex items-start gap-1"><svg lucideLock [size]="12" class="mt-1" aria-hidden="true"></svg>Note</dt><dd class="whitespace-pre-line">{{ x.note }}</dd> }
         }
@@ -77,7 +83,13 @@ type Sheet = { kind: 'complete' } | { kind: 'withdraw' } | { kind: 'add' } | { k
         }
       </ul>
 
-      @if (x.canManage) {
+      @if (x.status === 'Requested' && x.canDecide) {
+        <div class="grid grid-cols-2 gap-2 pt-1">
+          <button type="button" (click)="open({ kind: 'decline' })" class="ws-btn ws-btn-ghost !h-11">Decline</button>
+          <button type="button" (click)="open({ kind: 'accept' })" class="ws-btn ws-btn-primary !h-11">Accept</button>
+        </div>
+      }
+      @if (x.canManage && x.status !== 'Requested') {
         <button type="button" (click)="open({ kind: 'add' })" class="self-start min-h-[44px] -my-1 bg-transparent border-0 p-0 text-[14px] font-semibold text-indigo-700 flex items-center gap-1.5 cursor-pointer"><svg lucidePlus [size]="16" aria-hidden="true"></svg>Add a step</button>
         @if (x.status === 'Serving') {
           <div class="grid grid-cols-2 gap-2 pt-1">
@@ -119,9 +131,28 @@ type Sheet = { kind: 'complete' } | { kind: 'withdraw' } | { kind: 'add' } | { k
               <button type="button" (click)="complete()" [disabled]="working()" class="ws-btn btn-danger">{{ working() ? 'Completing…' : 'Complete exit today' }}</button>
               <button type="button" (click)="close()" class="ws-btn ws-btn-ghost">Not yet</button>
             }
+            @case ('accept') {
+              <p class="m-0 text-[15px] leading-relaxed text-slate-700">{{ name() }}’s notice starts and the offboarding checklist is created. They stay active until the last working day.</p>
+              <label class="ws-field">Last working day
+                <input class="ws-input" type="date" [min]="x.noticeDate.slice(0, 10)" [value]="lastDay()" (input)="lastDay.set($any($event.target).value)">
+                <span class="hint">They asked for {{ day(x.requestedLastDay ?? x.lastWorkingDay) }}@if (x.noticePeriodDays) {; their notice period is {{ x.noticePeriodDays }} days}.</span>
+              </label>
+              <label class="ws-field"><span>Note to {{ name() }} <span class="font-normal text-slate-600">· optional</span></span>
+                <input class="ws-input" maxlength="500" [value]="text()" (input)="text.set($any($event.target).value)" placeholder="e.g. Agreed with handover to Sameer">
+              </label>
+              <button type="button" (click)="accept()" [disabled]="working() || !lastDay()" class="ws-btn ws-btn-primary">{{ working() ? 'Accepting…' : 'Accept · last day ' + day(lastDay() || x.lastWorkingDay) }}</button>
+            }
+            @case ('decline') {
+              <p class="m-0 text-[15px] leading-relaxed text-slate-700">{{ name() }} stays on and sees your reason.</p>
+              <label class="ws-field">Reason
+                <textarea class="ws-input" rows="3" maxlength="500" [value]="text()" (input)="text.set($any($event.target).value)" placeholder="e.g. Let’s talk about the team move first" [attr.aria-invalid]="tried() && !text().trim()"></textarea>
+                @if (tried() && !text().trim()) { <span class="err">Say why, so they know what happens next.</span> }
+              </label>
+              <button type="button" (click)="decline()" [disabled]="working()" class="ws-btn btn-danger">{{ working() ? 'Declining…' : 'Decline resignation' }}</button>
+            }
             @case ('withdraw') {
               <p class="m-0 text-[15px] leading-relaxed text-slate-700">{{ name() }} stays on. The exit and its checklist are kept in their history.</p>
-              <label class="ws-field">Why <span class="font-normal text-slate-600">· optional</span>
+              <label class="ws-field"><span>Why <span class="font-normal text-slate-600">· optional</span></span>
                 <input class="ws-input" maxlength="500" [value]="text()" (input)="text.set($any($event.target).value)" placeholder="e.g. Accepted a counter-offer">
               </label>
               <button type="button" (click)="withdraw()" [disabled]="working()" class="ws-btn ws-btn-primary">{{ working() ? 'Withdrawing…' : 'Withdraw exit' }}</button>
@@ -194,11 +225,12 @@ export class ExitCardComponent {
   readonly ownerPick = signal('HR');
   readonly rehire = signal<boolean | null>(null);
   readonly tried = signal(false);
+  readonly lastDay = signal('');
   readonly open_ = computed(() => this.exit().tasks.length - this.exit().tasksDone);
   readonly title = computed(() => {
     const s = this.sheet();
     return !s ? '' : s.kind === 'complete' ? `Complete ${this.name()}’s exit?` : s.kind === 'withdraw' ? `Withdraw ${this.name()}’s exit?`
-      : s.kind === 'add' ? 'Add a step' : 'Checklist step';
+      : s.kind === 'add' ? 'Add a step' : s.kind === 'accept' ? `Accept ${this.name()}’s resignation?` : s.kind === 'decline' ? `Decline ${this.name()}’s resignation?` : 'Checklist step';
   });
 
   constructor() {
@@ -212,6 +244,7 @@ export class ExitCardComponent {
     this.sheetError.set(null); this.tried.set(false);
     this.text.set(s.kind === 'task' ? s.task.note ?? '' : '');
     this.ownerPick.set('HR'); this.rehire.set(this.exit().rehireEligible);
+    this.lastDay.set((this.exit().requestedLastDay ?? this.exit().lastWorkingDay).slice(0, 10));
     this.sheet.set(s);
   }
   close() { if (!this.working()) this.sheet.set(null); }
@@ -231,6 +264,17 @@ export class ExitCardComponent {
       if (done) this.toast.show(done);
       this.changed.emit(x);
     } catch (e) { this.sheetError.set(errorText(e, fallback)); this.working.set(false); }
+  }
+
+  accept() {
+    return this.run(() => firstValueFrom(this.people.acceptResignation(this.exit().employeeId, this.lastDay() + 'T00:00:00Z', this.text().trim() || null)),
+      `Resignation accepted. ${this.name()}’s last day is ${fmtDay(this.lastDay())}.`, 'Could not accept the resignation.');
+  }
+  decline() {
+    this.tried.set(true);
+    if (!this.text().trim()) return;
+    return this.run(() => firstValueFrom(this.people.declineResignation(this.exit().employeeId, this.text().trim())),
+      `Resignation declined. ${this.name()} will see your reason.`, 'Could not decline the resignation.');
   }
 
   complete() {
