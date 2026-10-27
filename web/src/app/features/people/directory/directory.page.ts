@@ -2,7 +2,8 @@ import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { Subject, catchError, debounceTime, distinctUntilChanged, of, switchMap, tap } from 'rxjs';
-import { LucideChevronRight, LucideSearch, LucideX } from '@lucide/angular';
+import { LucideChevronRight, LucideSearch, LucideUserPlus, LucideX } from '@lucide/angular';
+import { AuthService } from '../../../core/auth/auth.service';
 import { PeopleService } from '../people.service';
 import { Department, DirectoryEntry } from '../../../core/models/people.models';
 import { AvatarComponent } from '../../../shared/avatar.component';
@@ -14,13 +15,19 @@ const PAGE = 30;
 @Component({
   selector: 'ws-people-directory',
   standalone: true,
-  imports: [RouterLink, AvatarComponent, LucideSearch, LucideChevronRight, LucideX],
+  imports: [RouterLink, AvatarComponent, LucideSearch, LucideChevronRight, LucideX, LucideUserPlus],
   template: `
     <div class="mx-auto max-w-[760px]">
       <header class="sticky top-0 z-10 bg-white border-b border-slate-200 px-4 pt-5 pb-3 flex flex-col gap-3">
-        <h1 class="m-0 text-[26px] font-bold tracking-tight">People
-          @if (allTotal() !== null) { <span class="mono text-[16px] font-medium text-slate-600">{{ allTotal() }}</span> }
-        </h1>
+        <div class="flex items-center justify-between gap-3">
+          <h1 class="m-0 text-[26px] font-bold tracking-tight">People
+            @if (allTotal() !== null) { <span class="mono text-[16px] font-medium text-slate-600">{{ allTotal() }}</span> }
+          </h1>
+          @if (canAdd) {
+            <a routerLink="/people/new" class="h-10 px-3.5 rounded-10 bg-indigo-600 text-white text-[14px] font-semibold flex items-center gap-1.5 hover:bg-indigo-700">
+              <svg lucideUserPlus [size]="18" aria-hidden="true"></svg>Add person</a>
+          }
+        </div>
         <label class="flex items-center gap-2 h-11 px-3 rounded-12 border border-slate-300 bg-white focus-within:border-indigo-600 focus-within:ring-2 focus-within:ring-indigo-100">
           <svg lucideSearch [size]="18" class="text-slate-600 shrink-0" aria-hidden="true"></svg>
           <span class="sr-only">Search people</span>
@@ -107,6 +114,7 @@ const PAGE = 30;
 export class DirectoryPage {
   private readonly people = inject(PeopleService);
   private readonly destroyRef = inject(DestroyRef);
+  readonly canAdd = inject(AuthService).can('employees.create');
 
   readonly searchText = signal('');
   readonly dept = signal<string | null>(null);

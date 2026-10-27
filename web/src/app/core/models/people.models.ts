@@ -36,9 +36,9 @@ export interface Employee {
   profilePhotoUrl: string | null;
   gender: string | null;
   dateOfBirth: string | null;
-  address?: string | null;
-  emergencyContact?: string | null;
-  emergencyPhone?: string | null;
+  address: string | null;
+  emergencyContact: string | null;
+  emergencyPhone: string | null;
   locationId: string | null;
   locationName: string | null;
   gradeId: string | null;
@@ -72,6 +72,33 @@ export interface CustomField {
   isActive: boolean;
   employeeEditable: boolean;
   employeeCount: number;
+}
+
+export interface Designation { id: string; name: string; level: number; employeeCount: number; }
+export interface Location { id: string; name: string; city: string | null; state: string | null; country: string; timezone: string; isActive: boolean; employeeCount: number; }
+export interface Grade { id: string; name: string; level: number; description: string | null; employeeCount: number; }
+export interface EmploymentType { id: string; name: string; description: string | null; probationMonths: number; noticePeriodDays: number; isDefault: boolean; employeeCount: number; }
+export interface EmployeeSettings { codePrefix: string; codePadding: number; nextCodeNumber: number; nextCodePreview: string; }
+
+/** PUT /employees/me — personal details plus company fields marked "employee can edit". Empty string clears a text value. */
+export interface UpdateMyProfile {
+  phone?: string; gender?: string; address?: string; emergencyContact?: string; emergencyPhone?: string;
+  dateOfBirth?: string | null; customFields?: Record<string, unknown>;
+}
+
+/** POST /employees (employees.create). The code is generated when left out. */
+export interface CreateEmployee {
+  fullName: string; email: string; joiningDate: string;
+  departmentId?: string | null; designationId?: string | null; managerId?: string | null; phone?: string | null;
+  locationId?: string | null; gradeId?: string | null; employmentTypeId?: string | null;
+  customFields?: Record<string, unknown>; inviteToLogin: boolean;
+}
+
+/** PUT /employees/{id} (employees.edit). Null leaves a value unchanged; clearManager removes the manager. */
+export interface UpdateEmployee {
+  departmentId?: string | null; designationId?: string | null; managerId?: string | null; clearManager?: boolean;
+  phone?: string | null; locationId?: string | null; gradeId?: string | null; employmentTypeId?: string | null;
+  customFields?: Record<string, unknown>;
 }
 
 export interface Paged<T> {

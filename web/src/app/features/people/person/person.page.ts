@@ -3,6 +3,7 @@ import { Location } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom, catchError, of } from 'rxjs';
 import { LucideArrowLeft, LucideLock, LucideMail, LucidePhone } from '@lucide/angular';
+import { AuthService } from '../../../core/auth/auth.service';
 import { PeopleService } from '../people.service';
 import { CustomField, DirectoryEntry, Employee } from '../../../core/models/people.models';
 import { AvatarComponent } from '../../../shared/avatar.component';
@@ -21,6 +22,9 @@ interface Row { label: string; value?: string; chips?: string[]; mono?: boolean;
                 class="w-11 h-11 flex items-center justify-center rounded-full hover:bg-slate-100 cursor-pointer">
           <svg lucideArrowLeft [size]="22" aria-hidden="true"></svg>
         </button>
+        @if (canEdit && full()) {
+          <a [routerLink]="['/people', id(), 'edit']" class="ml-auto mr-2 h-10 px-4 rounded-10 border border-slate-300 bg-white text-[14px] font-semibold text-slate-900 flex items-center hover:bg-slate-50">Edit</a>
+        }
       </header>
 
       @if (loading()) {
@@ -120,6 +124,7 @@ export class PersonPage {
   private readonly people = inject(PeopleService);
   private readonly location = inject(Location);
   private readonly router = inject(Router);
+  readonly canEdit = inject(AuthService).can('employees.edit');
 
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
@@ -211,7 +216,7 @@ function tenure(iso: string) {
   const from = new Date(iso), now = new Date();
   let months = (now.getFullYear() - from.getFullYear()) * 12 + now.getMonth() - from.getMonth();
   if (now.getDate() < from.getDate()) months--;
-  if (months < 1) return 'joined this month';
+  if (months < 1) return 'less than a month';
   const y = Math.floor(months / 12), m = months % 12;
   return [y ? `${y} yr${y > 1 ? 's' : ''}` : '', m ? `${m} mo` : ''].filter(Boolean).join(' ');
 }

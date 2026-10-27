@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { ToastComponent } from '../../core/components/toast/toast.component';
 import { LucideCalendarDays, LucideEllipsis, LucideHouse, LucideSquareKanban, LucideUsers } from '@lucide/angular';
 
 /**
@@ -9,7 +10,7 @@ import { LucideCalendarDays, LucideEllipsis, LucideHouse, LucideSquareKanban, Lu
 @Component({
   selector: 'ws-app-shell',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, LucideHouse, LucideSquareKanban, LucideUsers, LucideCalendarDays, LucideEllipsis],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, ToastComponent, LucideHouse, LucideSquareKanban, LucideUsers, LucideCalendarDays, LucideEllipsis],
   template: `
     <div class="flex h-[100dvh] flex-col lg:flex-row bg-slate-50 text-slate-900">
       <main class="flex-1 min-h-0 min-w-0 overflow-y-auto overscroll-contain">
@@ -30,6 +31,7 @@ import { LucideCalendarDays, LucideEllipsis, LucideHouse, LucideSquareKanban, Lu
           <svg lucideEllipsis [size]="22" aria-hidden="true"></svg>More</a>
       </nav>
     </div>
+    <ws-toast />
   `,
   styles: [`
     .nav-item { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;

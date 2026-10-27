@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from '../../core/api/api.service';
 import { environment } from '../../../environments/environment';
-import { CustomField, Department, DirectoryEntry, Employee, Paged } from '../../core/models/people.models';
+import { CreateEmployee, CustomField, Department, Designation, DirectoryEntry, Employee, EmployeeSettings, EmploymentType, Grade, Location, Paged, UpdateEmployee, UpdateMyProfile } from '../../core/models/people.models';
 
 @Injectable({ providedIn: 'root' })
 export class PeopleService {
@@ -30,6 +30,24 @@ export class PeopleService {
   me(): Observable<Employee> {
     return this.api.get<Employee>(`${this.base}/employees/me`);
   }
+
+  updateMe(body: UpdateMyProfile): Observable<Employee> {
+    return this.api.put<Employee>(`${this.base}/employees/me`, body);
+  }
+
+  create(body: CreateEmployee): Observable<Employee> {
+    return this.api.post<Employee>(`${this.base}/employees`, body);
+  }
+
+  update(id: string, body: UpdateEmployee): Observable<Employee> {
+    return this.api.put<Employee>(`${this.base}/employees/${id}`, body);
+  }
+
+  designations(): Observable<Designation[]> { return this.api.get<Designation[]>(`${this.base}/designations`); }
+  locations(): Observable<Location[]> { return this.api.get<Location[]>(`${this.base}/locations`); }
+  grades(): Observable<Grade[]> { return this.api.get<Grade[]>(`${this.base}/grades`); }
+  employmentTypes(): Observable<EmploymentType[]> { return this.api.get<EmploymentType[]>(`${this.base}/employment-types`); }
+  employeeSettings(): Observable<EmployeeSettings> { return this.api.get<EmployeeSettings>(`${this.base}/employee-settings`); }
 
   departments(): Observable<Department[]> {
     return this.api.get<Department[]>(`${this.base}/departments`);

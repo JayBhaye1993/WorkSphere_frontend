@@ -18,9 +18,10 @@ import { ToastService } from '../../services/toast.service';
     </div>
   `,
   styles: [`
-    .toast-wrap { position:fixed;bottom:22px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:8px;z-index:9999;pointer-events:none; }
+    .toast-wrap { position:fixed;bottom:calc(88px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:8px;z-index:9999;pointer-events:none; }
     .toast { display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:10px;background:#0f172a;color:white;font-size:13px;font-weight:500;box-shadow:0 12px 32px rgba(15,23,42,.14);animation:rise .2s ease; }
     .toast-icon { color:#4f46e5;flex-shrink:0; }
+    @media (min-width:1024px) { .toast-wrap { bottom:22px; } }   /* above the phone bottom bar, low on desktop */
     @keyframes rise { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
   `]
 })

@@ -5,7 +5,6 @@ import { TaskState } from './store/task.state';
 import { SidebarComponent } from './components/sidebar/sidebar.component';
 import { BoardPageComponent } from './pages/board-page/board-page.component';
 import { WorkloadPageComponent } from './pages/workload-page/workload-page.component';
-import { ToastComponent } from '../../core/components/toast/toast.component';
 
 @Component({
   selector: 'ws-tasks-shell',
@@ -15,7 +14,6 @@ import { ToastComponent } from '../../core/components/toast/toast.component';
     SidebarComponent,
     BoardPageComponent,
     WorkloadPageComponent,
-    ToastComponent,
   ],
   template: `
     <div class="shell">
@@ -28,7 +26,6 @@ import { ToastComponent } from '../../core/components/toast/toast.component';
         }
       </main>
     </div>
-    <ws-toast />
   `,
   styles: [`
     .shell { display:grid; grid-template-columns:248px 1fr; height:100%; overflow:hidden; }   /* fills the app shell's content area */

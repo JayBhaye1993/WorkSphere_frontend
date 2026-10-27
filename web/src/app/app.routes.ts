@@ -20,13 +20,16 @@ export const routes: Routes = [
       },
       { path: 'tasks', loadChildren: () => import('./features/tasks/tasks.routes').then(m => m.TASK_ROUTES) },
       { path: 'people', loadComponent: () => import('./features/people/directory/directory.page').then(m => m.DirectoryPage) },
+      { path: 'people/new', loadComponent: () => import('./features/people/person-form/person-form.page').then(m => m.PersonFormPage) },
       { path: 'people/:id', loadComponent: () => import('./features/people/person/person.page').then(m => m.PersonPage) },
+      { path: 'people/:id/edit', loadComponent: () => import('./features/people/person-form/person-form.page').then(m => m.PersonFormPage) },
       {
         path: 'time-off',
         loadComponent: () => import('./features/soon/soon.page').then(m => m.SoonPage),
         data: { title: 'Time off', body: 'Leave requests, balances and holidays for your location will show here. They are built in the HR round.' },
       },
       { path: 'more', loadComponent: () => import('./features/more/more.page').then(m => m.MorePage) },
+      { path: 'more/profile', loadComponent: () => import('./features/people/my-profile/my-profile.page').then(m => m.MyProfilePage) },
       // Old links from the first prototype.
       { path: 'dashboard', redirectTo: 'people', pathMatch: 'prefix' },
     ],
