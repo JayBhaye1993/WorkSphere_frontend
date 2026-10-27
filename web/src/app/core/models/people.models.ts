@@ -99,7 +99,27 @@ export interface UpdateEmployee {
   departmentId?: string | null; designationId?: string | null; managerId?: string | null; clearManager?: boolean;
   phone?: string | null; locationId?: string | null; gradeId?: string | null; employmentTypeId?: string | null;
   customFields?: Record<string, unknown>;
+  /** When a job change takes effect (yyyy-MM-ddT00:00:00Z); default today. */
+  effectiveDate?: string | null;
+  changeReason?: string | null;
+  changeNote?: string | null;
 }
+
+/** One field changed on one save (GET /employees/{id}/history). Rows of one save share batchId. */
+export interface ChangeEntry {
+  id: string; batchId: string; changedAt: string; changedByName: string; source: 'HR' | 'Self' | 'System' | 'Import';
+  field: string; label: string; oldValue: string | null; newValue: string | null; isSensitive: boolean;
+}
+
+/** One career step (GET /employees/{id}/timeline), newest first. */
+export interface JobRecord {
+  id: string; effectiveDate: string; kind: string; note: string | null;
+  designationName: string | null; departmentName: string | null; managerId: string | null; managerName: string | null;
+  gradeName: string | null; locationName: string | null; employmentTypeName: string | null;
+  recordedByName: string; recordedAt: string;
+}
+
+export const CHANGE_REASONS = ['Promotion', 'Transfer', 'Manager change', 'Role change', 'Relocation', 'Correction'] as const;
 
 export interface Paged<T> {
   items: T[];

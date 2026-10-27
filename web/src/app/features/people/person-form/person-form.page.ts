@@ -3,7 +3,7 @@ import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom, catchError, of } from 'rxjs';
 import { LucideX } from '@lucide/angular';
 import { PeopleService } from '../people.service';
-import { CustomField, Department, Designation, Employee, EmploymentType, Grade, Location } from '../../../core/models/people.models';
+import { CHANGE_REASONS, CustomField, Department, Designation, Employee, EmploymentType, Grade, Location } from '../../../core/models/people.models';
 import { CustomFieldInputComponent, hasValue } from '../../../shared/custom-field-input.component';
 import { PersonPickerComponent, PickedPerson } from './person-picker.component';
 import { ToastService } from '../../../core/services/toast.service';
@@ -113,6 +113,28 @@ interface Form {
             </label>
           </section>
 
+          @if (jobChanged()) {
+            <section class="ws-card" aria-labelledby="chg-h">
+              <h2 id="chg-h" class="ws-card-h">About this change</h2>
+              <div class="grid grid-cols-2 gap-3">
+                <label class="ws-field">Takes effect from
+                  <input class="ws-input" type="date" [min]="minEffective()" [max]="today" [value]="effective()" (input)="effective.set($any($event.target).value); saveError.set(null)" [attr.aria-invalid]="show() && !!effErr()">
+                  @if (show() && effErr()) { <span class="err">{{ effErr() }}</span> }
+                </label>
+                <label class="ws-field">Reason
+                  <select class="ws-input" (change)="reason.set($any($event.target).value)">
+                    <option value="" [selected]="!reason()">Work it out for me</option>
+                    @for (r of reasons; track r) { <option [value]="r" [selected]="r === reason()">{{ r }}</option> }
+                  </select>
+                </label>
+              </div>
+              <label class="ws-field"><span>Note <span class="font-normal text-slate-600">· optional</span></span>
+                <input class="ws-input" maxlength="500" [value]="note()" (input)="note.set($any($event.target).value)" placeholder="e.g. Annual review 2026">
+              </label>
+              <span class="hint">Saved to {{ person()?.fullName?.split(' ')?.[0] }}’s career history.</span>
+            </section>
+          }
+
           @if (formFields().length) {
             <section class="ws-card">
               <h2 class="ws-card-h">Company fields</h2>
@@ -169,6 +191,27 @@ export class PersonFormPage {
     locationId: '', gradeId: '', employmentTypeId: '', manager: null, invite: true });
   readonly custom = signal<Record<string, unknown>>({});
   private original = '';
+  private originalForm: Form | null = null;
+  readonly today = today();
+  readonly reasons = CHANGE_REASONS;
+  readonly effective = signal(today());
+  readonly reason = signal('');
+  readonly note = signal('');
+  /** Earliest allowed effective date: the latest career step, else the joining date. */
+  readonly minEffective = signal('');
+  readonly jobChanged = computed(() => {
+    const o = this.originalForm, v = this.f();
+    if (!this.isEdit() || !o) return false;
+    return (['departmentId', 'designationId', 'locationId', 'gradeId', 'employmentTypeId'] as const).some(k => o[k] !== v[k])
+      || (o.manager?.id ?? null) !== (v.manager?.id ?? null);
+  });
+  readonly effErr = computed(() => {
+    const d = this.effective();
+    if (!d) return 'Choose the date it takes effect.';
+    if (d > this.today) return 'Can’t be in the future.';
+    if (this.minEffective() && d < this.minEffective()) return `Can’t be before ${fmt(this.minEffective())}, their last career step.`;
+    return null;
+  });
 
   readonly formFields = computed(() => this.fields().filter(x => x.isActive));
   readonly firstName = computed(() => this.f().fullName.trim().split(/\s+/)[0] ?? '');
@@ -208,7 +251,7 @@ export class PersonFormPage {
     for (const cf of this.formFields()) if (cf.isRequired && !hasValue(this.custom()[cf.key])) e.custom[cf.key] = `${cf.name} is required.`;
     return e;
   });
-  readonly hasErrors = computed(() => { const e = this.err(); return !!(e.fullName || e.email || e.joiningDate || e.phone || Object.keys(e.custom).length); });
+  readonly hasErrors = computed(() => { const e = this.err(); return !!(e.fullName || e.email || e.joiningDate || e.phone || Object.keys(e.custom).length || (this.jobChanged() && this.effErr())); });
 
   readonly submitLabel = computed(() => {
     if (this.saving()) return 'Saving…';
@@ -249,6 +292,10 @@ export class PersonFormPage {
           gradeId: person.gradeId ?? '', employmentTypeId: person.employmentTypeId ?? '', invite: false,
           manager: person.managerId ? { id: person.managerId, fullName: person.managerName ?? 'Current manager', designationName: null } : null });
         this.custom.set({ ...(person.customFields ?? {}) });
+        this.effective.set(today()); this.reason.set(''); this.note.set('');
+        const steps = await firstValueFrom(this.people.timeline(person.id).pipe(catchError(() => of([]))));
+        const latest = steps.map(s => s.effectiveDate.slice(0, 10)).sort().pop();
+        this.minEffective.set(latest ?? person.joiningDate.slice(0, 10));
         // Show the manager's title in the picker too.
         if (person.managerId) {
           const m = await firstValueFrom(this.people.card(person.managerId).pipe(catchError(() => of(null))));
@@ -258,6 +305,7 @@ export class PersonFormPage {
         this.set('employmentTypeId', types.find(t => t.isDefault)?.id ?? types[0]?.id ?? '');
       }
       this.original = this.snapshot();
+      this.originalForm = this.f();
     } catch (e) {
       this.loadError.set(errorText(e, this.isEdit() ? 'You cannot edit this person.' : 'Could not load the form.'));
     } finally { this.loading.set(false); }
@@ -280,6 +328,7 @@ export class PersonFormPage {
           locationId: id(v.locationId), gradeId: id(v.gradeId), employmentTypeId: id(v.employmentTypeId),
           managerId: v.manager?.id ?? null, clearManager: !v.manager && !!p.managerId,
           customFields: Object.keys(changed).length ? changed : undefined,
+          ...(this.jobChanged() ? { effectiveDate: this.effective() + 'T00:00:00Z', changeReason: this.reason() || undefined, changeNote: this.note().trim() || undefined } : {}),
         }));
         this.toast.show(`${p.fullName.split(' ')[0]}'s details are saved.`);
         await this.router.navigate(['/people', p.id], { replaceUrl: true });
@@ -300,3 +349,5 @@ export class PersonFormPage {
     } finally { this.saving.set(false); }
   }
 }
+
+function fmt(d: string) { return new Date(d + 'T00:00:00Z').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }); }

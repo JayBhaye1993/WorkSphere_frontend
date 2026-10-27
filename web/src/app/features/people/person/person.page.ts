@@ -5,16 +5,17 @@ import { firstValueFrom, catchError, of } from 'rxjs';
 import { LucideArrowLeft, LucideLock, LucideMail, LucidePhone } from '@lucide/angular';
 import { AuthService } from '../../../core/auth/auth.service';
 import { PeopleService } from '../people.service';
-import { CustomField, DirectoryEntry, Employee } from '../../../core/models/people.models';
+import { CustomField, DirectoryEntry, Employee, JobRecord } from '../../../core/models/people.models';
 import { AvatarComponent } from '../../../shared/avatar.component';
 import { errorText } from '../people-errors';
+import { CareerTimelineComponent } from '../career-timeline.component';
 
 interface Row { label: string; value?: string; chips?: string[]; mono?: boolean; }
 
 @Component({
   selector: 'ws-person',
   standalone: true,
-  imports: [RouterLink, AvatarComponent, LucideArrowLeft, LucidePhone, LucideMail, LucideLock],
+  imports: [RouterLink, AvatarComponent, CareerTimelineComponent, LucideArrowLeft, LucidePhone, LucideMail, LucideLock],
   template: `
     <div class="mx-auto max-w-[760px] pb-10">
       <header class="sticky top-0 z-10 h-14 px-1 bg-white flex items-center">
@@ -85,6 +86,17 @@ interface Row { label: string; value?: string; chips?: string[]; mono?: boolean;
             </section>
           }
 
+          @if (steps().length) {
+            <section class="card" aria-labelledby="career-h">
+              <div class="flex items-center justify-between">
+                <h2 id="career-h" class="card-h">Career</h2>
+                <a [routerLink]="['/people', id(), 'history']" class="text-[14px] font-semibold min-h-[44px] flex items-center -my-3">Full history</a>
+              </div>
+              <ws-career-timeline [steps]="steps()" [limit]="3" />
+              @if (steps().length > 3) { <p class="m-0 text-[13px] text-slate-600">{{ steps().length - 3 }} earlier {{ steps().length - 3 === 1 ? 'step' : 'steps' }} in full history.</p> }
+            </section>
+          }
+
           @if (personal().length) {
             <section class="card">
               <h2 class="card-h flex items-center gap-1.5"><svg lucideLock [size]="14" aria-hidden="true"></svg>Personal</h2>
@@ -132,6 +144,7 @@ export class PersonPage {
   readonly full = signal<Employee | null>(null);
   readonly fields = signal<CustomField[]>([]);
   readonly chain = signal<DirectoryEntry[]>([]);
+  readonly steps = signal<JobRecord[]>([]);
 
   readonly firstName = computed(() => this.card()?.fullName.split(' ')[0] ?? '');
   readonly titleLine = computed(() => [this.card()?.designationName, this.card()?.departmentName].filter(Boolean).join(' · '));
@@ -170,7 +183,7 @@ export class PersonPage {
   }
 
   private async load(id: string) {
-    this.loading.set(true); this.error.set(null); this.full.set(null); this.chain.set([]);
+    this.loading.set(true); this.error.set(null); this.full.set(null); this.chain.set([]); this.steps.set([]);
     try {
       const [card, full, fields] = await Promise.all([
         firstValueFrom(this.people.card(id)),
@@ -179,6 +192,7 @@ export class PersonPage {
       ]);
       this.card.set(card); this.full.set(full); this.fields.set(fields);
       this.loading.set(false);
+      if (full) firstValueFrom(this.people.timeline(id)).then(s => { if (this.id() === id) this.steps.set(s); }).catch(() => {});
       // Reporting line, up to three levels.
       const chain: DirectoryEntry[] = [];
       let next = card.managerId;

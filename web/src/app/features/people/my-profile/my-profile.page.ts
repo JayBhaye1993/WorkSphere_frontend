@@ -85,6 +85,7 @@ interface Form { phone: string; dateOfBirth: string; gender: string; address: st
               @for (r of hrRows(); track r[0]) { <dt class="text-slate-600">{{ r[0] }}</dt><dd class="m-0">{{ r[1] }}</dd> }
             </dl>
             <p class="m-0 text-[13px] text-slate-600">Something wrong here? Ask HR to correct it.</p>
+            <a [routerLink]="['/people', e.id, 'history']" class="self-start min-h-[44px] flex items-center text-[14px] font-semibold">See your career and change history</a>
           </section>
 
           <div class="sticky bottom-0 -mx-4 px-4 py-3 bg-white border-t border-slate-200 mt-auto">

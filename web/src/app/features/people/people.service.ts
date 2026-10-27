@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from '../../core/api/api.service';
 import { environment } from '../../../environments/environment';
-import { CreateEmployee, CustomField, Department, Designation, DirectoryEntry, Employee, EmployeeSettings, EmploymentType, Grade, Location, Paged, UpdateEmployee, UpdateMyProfile } from '../../core/models/people.models';
+import { ChangeEntry, CreateEmployee, CustomField, JobRecord, Department, Designation, DirectoryEntry, Employee, EmployeeSettings, EmploymentType, Grade, Location, Paged, UpdateEmployee, UpdateMyProfile } from '../../core/models/people.models';
 
 @Injectable({ providedIn: 'root' })
 export class PeopleService {
@@ -48,6 +48,16 @@ export class PeopleService {
   grades(): Observable<Grade[]> { return this.api.get<Grade[]>(`${this.base}/grades`); }
   employmentTypes(): Observable<EmploymentType[]> { return this.api.get<EmploymentType[]>(`${this.base}/employment-types`); }
   employeeSettings(): Observable<EmployeeSettings> { return this.api.get<EmployeeSettings>(`${this.base}/employee-settings`); }
+
+  /** Change log, newest first. Private changes only for HR and the person. */
+  history(id: string, page = 1, pageSize = 50): Observable<Paged<ChangeEntry>> {
+    return this.api.get<Paged<ChangeEntry>>(`${this.base}/employees/${id}/history`, { page, pageSize });
+  }
+
+  /** Career steps, newest first. */
+  timeline(id: string): Observable<JobRecord[]> {
+    return this.api.get<JobRecord[]>(`${this.base}/employees/${id}/timeline`);
+  }
 
   departments(): Observable<Department[]> {
     return this.api.get<Department[]>(`${this.base}/departments`);
