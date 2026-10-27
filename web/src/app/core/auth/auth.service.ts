@@ -20,6 +20,11 @@ export class AuthService {
   readonly tenantId   = computed(() => this._user()?.tenantId ?? '');
   readonly roles      = computed(() => this._user()?.roles ?? []);
 
+  // Permissions come from the access token's "perm" claims ("employees.create", "employees.view:team"...).
+  // Used only to show or hide controls; the API enforces every rule itself.
+  private _perms = signal<string[]>(readPerms(localStorage.getItem(TOKEN_KEY)));
+  readonly permissions = this._perms.asReadonly();
+
   constructor(private http: HttpClient, private router: Router) {}
 
   login(req: LoginRequest) {
@@ -61,11 +66,23 @@ export class AuthService {
     return this.roles().includes(role);
   }
 
+  /** True when the user holds the permission at any scope ("employees.view" matches "employees.view:team"). */
+  can(key: string): boolean {
+    return this._perms().some(p => p === key || p.startsWith(key + ':'));
+  }
+
+  /** The scope held for a scoped permission: 'all' > 'team' > 'own', or null. */
+  scopeOf(key: string): 'all' | 'team' | 'own' | null {
+    const scopes = this._perms().filter(p => p.startsWith(key + ':')).map(p => p.split(':')[1]);
+    return (['all', 'team', 'own'] as const).find(s => scopes.includes(s)) ?? null;
+  }
+
   private saveSession(auth: AuthToken) {
     localStorage.setItem(TOKEN_KEY,   auth.accessToken);
     localStorage.setItem(REFRESH_KEY, auth.refreshToken);
     localStorage.setItem(USER_KEY,    JSON.stringify(auth.user));
     this._user.set(auth.user);
+    this._perms.set(readPerms(auth.accessToken));
   }
 
   private clearSession() {
@@ -73,6 +90,7 @@ export class AuthService {
     localStorage.removeItem(REFRESH_KEY);
     localStorage.removeItem(USER_KEY);
     this._user.set(null);
+    this._perms.set([]);
   }
 
   private loadUser(): UserProfile | null {
@@ -81,4 +99,16 @@ export class AuthService {
       return raw ? JSON.parse(raw) : null;
     } catch { return null; }
   }
+}
+
+/** Reads the "perm" claim(s) from a JWT without verifying it (display only). */
+function readPerms(token: string | null): string[] {
+  if (!token) return [];
+  try {
+    const part = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    const bytes = Uint8Array.from(atob(part.padEnd(part.length + (4 - part.length % 4) % 4, '=')), c => c.charCodeAt(0));
+    const json = JSON.parse(new TextDecoder().decode(bytes));
+    const p = json.perm;
+    return Array.isArray(p) ? p : p ? [p] : [];
+  } catch { return []; }
 }

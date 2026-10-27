@@ -70,7 +70,7 @@ export class RegisterComponent {
         password:    this.password,
       })
       .subscribe({
-        next:  () => this.router.navigate(['/dashboard']),
+        next:  () => this.router.navigate(['/']),
         error: (err) => {
           const msg = err?.error?.error ?? 'Registration failed. Please try again.';
           this.errorMessage.set(msg);

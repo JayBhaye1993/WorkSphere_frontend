@@ -31,7 +31,7 @@ import { ToastComponent } from '../../core/components/toast/toast.component';
     <ws-toast />
   `,
   styles: [`
-    .shell { display:grid; grid-template-columns:248px 1fr; height:100vh; overflow:hidden; }
+    .shell { display:grid; grid-template-columns:248px 1fr; height:100%; overflow:hidden; }   /* fills the app shell's content area */
     .main  { overflow:hidden; display:flex; flex-direction:column; background:#f1f5f9; }
   `]
 })
