@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/auth/auth.guard';
+import { permissionGuard } from './core/auth/permission.guard';
 
 export const routes: Routes = [
   {
@@ -20,9 +21,9 @@ export const routes: Routes = [
       },
       { path: 'tasks', loadChildren: () => import('./features/tasks/tasks.routes').then(m => m.TASK_ROUTES) },
       { path: 'people', loadComponent: () => import('./features/people/directory/directory.page').then(m => m.DirectoryPage) },
-      { path: 'people/new', loadComponent: () => import('./features/people/person-form/person-form.page').then(m => m.PersonFormPage) },
+      { path: 'people/new', canActivate: [permissionGuard('employees.create')], loadComponent: () => import('./features/people/person-form/person-form.page').then(m => m.PersonFormPage) },
       { path: 'people/:id', loadComponent: () => import('./features/people/person/person.page').then(m => m.PersonPage) },
-      { path: 'people/:id/edit', loadComponent: () => import('./features/people/person-form/person-form.page').then(m => m.PersonFormPage) },
+      { path: 'people/:id/edit', canActivate: [permissionGuard('employees.edit')], loadComponent: () => import('./features/people/person-form/person-form.page').then(m => m.PersonFormPage) },
       {
         path: 'time-off',
         loadComponent: () => import('./features/soon/soon.page').then(m => m.SoonPage),
@@ -30,6 +31,18 @@ export const routes: Routes = [
       },
       { path: 'more', loadComponent: () => import('./features/more/more.page').then(m => m.MorePage) },
       { path: 'more/profile', loadComponent: () => import('./features/people/my-profile/my-profile.page').then(m => m.MyProfilePage) },
+      {
+        path: 'more/settings',
+        canActivate: [permissionGuard('org.manage')],
+        children: [
+          { path: '', loadComponent: () => import('./features/settings/settings-hub.page').then(m => m.SettingsHubPage) },
+          { path: 'custom-fields', loadComponent: () => import('./features/settings/custom-fields.page').then(m => m.CustomFieldsPage) },
+          { path: 'custom-fields/new', loadComponent: () => import('./features/settings/custom-field-edit.page').then(m => m.CustomFieldEditPage) },
+          { path: 'custom-fields/:id', loadComponent: () => import('./features/settings/custom-field-edit.page').then(m => m.CustomFieldEditPage) },
+          { path: 'employee-code', loadComponent: () => import('./features/settings/employee-code.page').then(m => m.EmployeeCodePage) },
+          { path: ':kind', loadComponent: () => import('./features/settings/org-list.page').then(m => m.OrgListPage) },
+        ],
+      },
       // Old links from the first prototype.
       { path: 'dashboard', redirectTo: 'people', pathMatch: 'prefix' },
     ],
