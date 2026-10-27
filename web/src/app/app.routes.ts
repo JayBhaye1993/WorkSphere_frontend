@@ -22,6 +22,7 @@ export const routes: Routes = [
       { path: 'tasks', loadChildren: () => import('./features/tasks/tasks.routes').then(m => m.TASK_ROUTES) },
       { path: 'people', loadComponent: () => import('./features/people/directory/directory.page').then(m => m.DirectoryPage) },
       { path: 'people/new', canActivate: [permissionGuard('employees.create')], loadComponent: () => import('./features/people/person-form/person-form.page').then(m => m.PersonFormPage) },
+      { path: 'people/import', canActivate: [permissionGuard('employees.create')], loadComponent: () => import('./features/people/import/import.page').then(m => m.ImportPage) },
       { path: 'people/:id', loadComponent: () => import('./features/people/person/person.page').then(m => m.PersonPage) },
       { path: 'people/:id/exit', canActivate: [permissionGuard('employees.exit')], loadComponent: () => import('./features/people/exit/exit-form.page').then(m => m.ExitFormPage) },
       { path: 'people/:id/history', loadComponent: () => import('./features/people/history/history.page').then(m => m.HistoryPage) },

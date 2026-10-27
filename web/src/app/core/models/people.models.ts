@@ -138,6 +138,11 @@ export interface ExitReason { id: string; name: string; sortOrder: number; usage
 export const EXIT_TYPES = ['Resignation', 'Termination', 'Retirement', 'Contract end', 'Other'] as const;
 export const TASK_OWNERS = ['HR', 'Manager', 'IT', 'Finance', 'Employee'] as const;
 
+export interface ImportIssue { column: string; message: string; }
+export interface ImportRow { row: number; action: 'Add' | 'Update' | 'Unchanged' | 'Error'; name: string; email: string; changes: string[]; issues: ImportIssue[]; }
+export interface ImportPreview { total: number; toAdd: number; toUpdate: number; unchanged: number; withErrors: number; rows: ImportRow[]; ignoredColumns: string[]; errorFileBase64: string | null; }
+export interface ImportResult { added: number; updated: number; unchanged: number; failed: number; failures: ImportRow[]; errorFileBase64: string | null; }
+
 export const CHANGE_REASONS = ['Promotion', 'Transfer', 'Manager change', 'Role change', 'Relocation', 'Correction'] as const;
 
 export interface Paged<T> {

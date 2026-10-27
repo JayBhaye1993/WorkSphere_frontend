@@ -2,7 +2,10 @@ import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { Subject, catchError, debounceTime, distinctUntilChanged, of, switchMap, tap } from 'rxjs';
-import { LucideChevronRight, LucideSearch, LucideUserPlus, LucideX } from '@lucide/angular';
+import { LucideChevronRight, LucideDownload, LucideSearch, LucideUpload, LucideUserPlus, LucideX } from '@lucide/angular';
+import { firstValueFrom } from 'rxjs';
+import { ToastService } from '../../../core/services/toast.service';
+import { saveBlob } from '../../../core/util/download';
 import { AuthService } from '../../../core/auth/auth.service';
 import { PeopleService } from '../people.service';
 import { Department, DirectoryEntry } from '../../../core/models/people.models';
@@ -15,14 +18,22 @@ const PAGE = 30;
 @Component({
   selector: 'ws-people-directory',
   standalone: true,
-  imports: [RouterLink, AvatarComponent, LucideSearch, LucideChevronRight, LucideX, LucideUserPlus],
+  imports: [RouterLink, AvatarComponent, LucideSearch, LucideChevronRight, LucideX, LucideUserPlus, LucideDownload, LucideUpload],
   template: `
     <div class="mx-auto max-w-[760px]">
       <header class="sticky top-0 z-10 bg-white border-b border-slate-200 px-4 pt-5 pb-3 flex flex-col gap-3">
-        <div class="flex items-center justify-between gap-3">
+        <div class="flex items-center gap-2">
           <h1 class="m-0 text-[26px] font-bold tracking-tight">People
             @if (allTotal() !== null) { <span class="mono text-[16px] font-medium text-slate-600">{{ allTotal() }}</span> }
           </h1>
+          <span class="flex-1"></span>
+          @if (canExport) {
+            <button type="button" (click)="export()" [disabled]="exporting()" aria-label="Export to Excel" title="Export to Excel"
+                    class="icon-btn"><svg lucideDownload [size]="19" aria-hidden="true"></svg></button>
+          }
+          @if (canAdd) {
+            <a routerLink="/people/import" aria-label="Import from Excel" title="Import from Excel" class="icon-btn"><svg lucideUpload [size]="19" aria-hidden="true"></svg></a>
+          }
           @if (canAdd) {
             <a routerLink="/people/new" class="h-10 px-3.5 rounded-10 bg-indigo-600 text-white text-[14px] font-semibold flex items-center gap-1.5 hover:bg-indigo-700">
               <svg lucideUserPlus [size]="18" aria-hidden="true"></svg>Add person</a>
@@ -128,6 +139,9 @@ const PAGE = 30;
     .chip:focus-visible, .row:focus-visible { outline:2px solid #4f46e5; outline-offset:2px; }
     .row { display:flex; align-items:center; gap:12px; min-height:64px; padding:8px 16px; color:inherit; text-decoration:none; }
     .row:hover { background:#f8fafc; }
+    .icon-btn { width:40px; height:40px; flex-shrink:0; display:flex; align-items:center; justify-content:center; border-radius:10px; border:1px solid #cbd5e1; background:#fff; color:#334155; cursor:pointer; }
+    .icon-btn:hover { background:#f8fafc; } .icon-btn:disabled { opacity:.5; }
+    .icon-btn:focus-visible { outline:2px solid #4f46e5; outline-offset:2px; }
     .seg { height:36px; border-radius:10px; border:0; font-size:14px; cursor:pointer; background:transparent; color:#475569; font-weight:500; }
     .seg-on { background:#fff; color:#0f172a; font-weight:600; box-shadow:0 1px 2px rgba(15,23,42,.08); }
     .seg:focus-visible { outline:2px solid #4f46e5; outline-offset:1px; }
@@ -143,6 +157,10 @@ export class DirectoryPage {
   readonly canExit = this.auth.can('employees.exit');
   readonly shows = [{ id: null, label: 'Everyone' }, { id: 'leaving', label: 'Leaving' }, { id: 'former', label: 'Former' }] as const;
   readonly show = signal<'leaving' | 'former' | null>(null);
+  /** Export makes sense for managers (their team) and HR; an employee would only get themselves. */
+  readonly canExport = ['team', 'all'].includes(this.auth.scopeOf('employees.view') ?? '');
+  readonly exporting = signal(false);
+  private readonly toast = inject(ToastService);
 
   readonly searchText = signal('');
   readonly dept = signal<string | null>(null);
@@ -197,6 +215,16 @@ export class DirectoryPage {
   }
 
   typed(v: string) { this.searchText.set(v); this.typing$.next(v.trim()); }
+  /** Exactly what the list shows: search, team and Everyone / Leaving / Former. */
+  async export() {
+    this.exporting.set(true);
+    try {
+      const f = await firstValueFrom(this.people.exportPeople({ search: this.searchText(), departmentId: this.dept(), show: this.show() }));
+      saveBlob(f.blob, f.name);
+      this.toast.show(`Exported ${this.total()} ${this.total() === 1 ? 'person' : 'people'}.`);
+    } catch (e) { this.toast.show(errorText(e, 'Could not export. Please try again.')); }
+    finally { this.exporting.set(false); }
+  }
   setShow(s: 'leaving' | 'former' | null) { if (this.show() !== s) { this.show.set(s); this.reload$.next(); } }
   day(iso: string, year = false) {
     // A calendar day: read the date part only, whether or not the server added a time zone.
