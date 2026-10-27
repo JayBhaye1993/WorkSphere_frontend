@@ -5,6 +5,8 @@ import { LucideArrowLeft, LucideLock } from '@lucide/angular';
 import { PeopleService } from '../people.service';
 import { CustomField, Employee, ExitCase, UpdateMyProfile } from '../../../core/models/people.models';
 import { ExitCardComponent } from '../exit/exit-card.component';
+import { DocumentsComponent } from '../files/documents.component';
+import { PhotoSheetComponent } from '../files/photo-sheet.component';
 import { fmtDay } from '../exit/exit-dates';
 import { AvatarComponent } from '../../../shared/avatar.component';
 import { CustomFieldInputComponent } from '../../../shared/custom-field-input.component';
@@ -19,7 +21,7 @@ interface Form { phone: string; dateOfBirth: string; gender: string; address: st
 /** Your own details: what you may change yourself, and what HR keeps (read-only). */
 @Component({
   standalone: true,
-  imports: [RouterLink, AvatarComponent, CustomFieldInputComponent, ExitCardComponent, LucideArrowLeft, LucideLock],
+  imports: [RouterLink, AvatarComponent, CustomFieldInputComponent, ExitCardComponent, DocumentsComponent, PhotoSheetComponent, LucideArrowLeft, LucideLock],
   template: `
     <div class="mx-auto max-w-[640px] min-h-full flex flex-col">
       <header class="sticky top-0 z-10 h-14 px-1 bg-white border-b border-slate-200 flex items-center gap-1">
@@ -36,7 +38,10 @@ interface Form { phone: string; dateOfBirth: string; gender: string; address: st
       } @else { @if (me(); as e) {
         <form class="flex-1 p-4 flex flex-col gap-4" (submit)="$event.preventDefault(); save()" novalidate>
           <div class="flex items-center gap-3">
-            <ws-avatar [name]="e.fullName" [photo]="e.profilePhotoUrl" [size]="52" />
+            <button type="button" (click)="photoOpen.set(true)" aria-label="Change your photo" class="relative rounded-full bg-transparent border-0 p-0 cursor-pointer">
+              <ws-avatar [name]="e.fullName" [photo]="e.profilePhotoUrl" [size]="56" />
+              <span aria-hidden="true" class="absolute -right-1 -bottom-1 px-1.5 py-px rounded-full bg-white border border-slate-300 text-[10px] font-semibold text-slate-700">Edit</span>
+            </button>
             <div class="min-w-0 flex flex-col">
               <span class="text-[17px] font-bold">{{ e.fullName }}</span>
               <span class="text-[13px] text-slate-600 truncate">{{ e.email }}</span>
@@ -90,6 +95,8 @@ interface Form { phone: string; dateOfBirth: string; gender: string; address: st
             <a [routerLink]="['/people', e.id, 'history']" class="self-start min-h-[44px] flex items-center text-[14px] font-semibold">See your career and change history</a>
           </section>
 
+          <ws-documents [employeeId]="e.id" [self]="true" />
+
           @if (exit(); as x) {
             @if (x.status === 'Requested') {
               <section class="p-4 rounded-14 bg-amber-50 border border-amber-200 flex flex-col gap-2" aria-live="polite">
@@ -120,6 +127,9 @@ interface Form { phone: string; dateOfBirth: string; gender: string; address: st
         </form>
       } }
     </div>
+    @if (photoOpen() && me(); as m) {
+      <ws-photo-sheet [employeeId]="null" [name]="m.fullName" [photo]="m.profilePhotoUrl" [self]="true" (closed)="photoOpen.set(false)" (changed)="photoChanged($event)" />
+    }
   `,
 })
 export class MyProfilePage {
@@ -165,6 +175,8 @@ export class MyProfilePage {
   }
 
   readonly exit = signal<ExitCase | null>(null);
+  readonly photoOpen = signal(false);
+  photoChanged(name: string | null) { const m = this.me(); if (m) this.me.set({ ...m, profilePhotoUrl: name }); }
   readonly withdrawing = signal(false);
   day(d: string) { return fmtDay(d); }
 

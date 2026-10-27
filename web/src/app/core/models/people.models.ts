@@ -155,6 +155,9 @@ export interface OrgPerson {
   managerId: string | null; directReports: number; teamSize: number;
 }
 
+export interface PersonDocument { id: string; categoryId: string; categoryName: string; visibility: string; title: string; fileName: string; contentType: string; sizeBytes: number; uploadedByName: string; uploadedAt: string; canDelete: boolean; }
+export interface PersonDocuments { documents: PersonDocument[]; canUploadTo: { id: string; name: string; visibility: string }[]; }
+
 export const CHANGE_REASONS = ['Promotion', 'Transfer', 'Manager change', 'Role change', 'Relocation', 'Correction'] as const;
 
 export interface Paged<T> {

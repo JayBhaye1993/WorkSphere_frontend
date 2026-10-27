@@ -10,6 +10,8 @@ import { AvatarComponent } from '../../../shared/avatar.component';
 import { errorText } from '../people-errors';
 import { CareerTimelineComponent } from '../career-timeline.component';
 import { ExitCardComponent } from '../exit/exit-card.component';
+import { DocumentsComponent } from '../files/documents.component';
+import { PhotoSheetComponent } from '../files/photo-sheet.component';
 import { fmtDay } from '../exit/exit-dates';
 
 interface Row { label: string; value?: string; chips?: string[]; mono?: boolean; }
@@ -17,7 +19,7 @@ interface Row { label: string; value?: string; chips?: string[]; mono?: boolean;
 @Component({
   selector: 'ws-person',
   standalone: true,
-  imports: [RouterLink, AvatarComponent, CareerTimelineComponent, ExitCardComponent, LucideArrowLeft, LucidePhone, LucideMail, LucideLock],
+  imports: [RouterLink, AvatarComponent, CareerTimelineComponent, ExitCardComponent, DocumentsComponent, PhotoSheetComponent, LucideArrowLeft, LucidePhone, LucideMail, LucideLock],
   template: `
     <div class="mx-auto max-w-[760px] pb-10">
       <header class="sticky top-0 z-10 h-14 px-1 bg-white flex items-center">
@@ -43,7 +45,14 @@ interface Row { label: string; value?: string; chips?: string[]; mono?: boolean;
         </div>
       } @else { @if (card(); as c) {
         <section class="bg-white px-5 pb-5 flex flex-col items-center gap-1.5 border-b border-slate-200 text-center">
-          <ws-avatar [name]="c.fullName" [photo]="c.profilePhotoUrl" [size]="72" />
+          @if (canEditPhoto()) {
+            <button type="button" (click)="photoOpen.set(true)" aria-label="Change photo" class="relative rounded-full bg-transparent border-0 p-0 cursor-pointer">
+              <ws-avatar [name]="c.fullName" [photo]="c.profilePhotoUrl" [size]="72" />
+              <span aria-hidden="true" class="absolute -right-1 -bottom-1 px-1.5 py-px rounded-full bg-white border border-slate-300 text-[11px] font-semibold text-slate-700">Edit</span>
+            </button>
+          } @else {
+            <ws-avatar [name]="c.fullName" [photo]="c.profilePhotoUrl" [size]="72" />
+          }
           <h1 class="mt-2 mb-0 text-[22px] font-bold">{{ c.fullName }}</h1>
           @if (titleLine()) { <p class="m-0 text-[14px] text-slate-700">{{ titleLine() }}</p> }
           <p class="m-0 text-[13px] text-slate-600"><span class="mono">{{ c.employeeCode }}</span>@if (c.locationName) { · {{ c.locationName }} }</p>
@@ -122,6 +131,8 @@ interface Row { label: string; value?: string; chips?: string[]; mono?: boolean;
             </section>
           }
 
+          @if (full()) { <ws-documents [employeeId]="id()" [self]="isSelf()" /> }
+
           @if (canStartExit()) {
             <a [routerLink]="['/people', id(), 'exit']" class="self-center mt-2 min-h-[44px] px-4 flex items-center text-[14px] font-semibold text-red-700 no-underline rounded-10 hover:bg-red-50">Start exit</a>
           }
@@ -132,6 +143,9 @@ interface Row { label: string; value?: string; chips?: string[]; mono?: boolean;
         </div>
       } }
     </div>
+    @if (photoOpen() && card(); as c) {
+      <ws-photo-sheet [employeeId]="c.id" [name]="c.fullName" [photo]="c.profilePhotoUrl" [self]="isSelf()" (closed)="photoOpen.set(false)" (changed)="photoChanged($event)" />
+    }
   `,
   styles: [`
     .action { height:56px; border-radius:12px; background:#eef2ff; color:#3730a3; font-size:13px; font-weight:600;
@@ -165,6 +179,11 @@ export class PersonPage {
   readonly chain = signal<DirectoryEntry[]>([]);
   readonly steps = signal<JobRecord[]>([]);
   readonly exit = signal<ExitCase | null>(null);
+  readonly photoOpen = signal(false);
+  readonly isSelf = computed(() => !!this.card() && this.card()!.email === this.auth.user()?.email);
+  /** Your own photo, or someone you may edit (and who is still here). */
+  readonly canEditPhoto = computed(() => this.card()?.status !== 'Exited' && (this.isSelf() || (this.canEdit && !!this.full())));
+  photoChanged(name: string | null) { const c = this.card(); if (c) this.card.set({ ...c, profilePhotoUrl: name }); }
   /** HR, someone still here, no exit in progress, and not their own profile. */
   readonly canStartExit = computed(() => this.canExit && !!this.full() && this.card()?.status !== 'Exited'
     && (!this.exit() || this.exit()!.status === 'Withdrawn' || this.exit()!.status === 'Declined') && this.card()?.email !== this.auth.user()?.email);

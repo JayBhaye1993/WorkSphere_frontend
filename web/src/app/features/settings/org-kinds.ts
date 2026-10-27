@@ -29,6 +29,9 @@ export interface KindDef {
   reorder?: boolean;
 }
 
+const VISIBILITY: Option[] = [
+  { value: 'HR', label: 'HR only' }, { value: 'HR and employee', label: 'HR and the person' },
+  { value: 'HR, employee and manager', label: 'HR, the person and their managers' }];
 const OWNERS: Option[] = ['HR', 'Manager', 'IT', 'Finance', 'Employee'].map(o => ({ value: o, label: o === 'Employee' ? 'The person leaving' : o }));
 const people = (n: number) => n === 0 ? 'Not used yet' : n === 1 ? '1 person' : `${n} people`;
 const num = (v: any) => v === '' || v === null || v === undefined ? 0 : Number(v);
@@ -137,6 +140,21 @@ export const KINDS: Record<string, KindDef> = {
     body: v => ({ name: v['name'].trim(), description: v['description'].trim() || null, probationMonths: num(v['probationMonths']), noticePeriodDays: num(v['noticePeriodDays']), isDefault: !!v['isDefault'] }),
     blocked: t => t.isDefault ? `${t.name} is the default. Make another type the default first.`
       : t.employeeCount ? `${people(t.employeeCount)} ${t.employeeCount === 1 ? 'is' : 'are'} on ${t.name}. Move them to another type first.` : null,
+  },
+  'document-categories': {
+    path: 'document-categories', title: 'Document types', singular: 'document type',
+    intro: 'The kinds of documents you keep on profiles, and who may see each. People can upload their own where you allow it.',
+    fields: [
+      { key: 'name', label: 'Name', type: 'text', required: true, placeholder: 'e.g. Bank details proof' },
+      { key: 'visibility', label: 'Who can see these', type: 'select', required: true, options: () => VISIBILITY },
+      { key: 'employeeCanUpload', label: 'People can upload their own', type: 'checkbox', hint: 'For ID proofs, certificates and the like.' },
+    ],
+    sort: (a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name),
+    row: c => ({ title: c.name, sub: [c.visibility === 'HR' ? 'HR only' : c.visibility, c.employeeCanUpload ? 'people can upload' : '', c.documentCount ? `${c.documentCount} on file` : 'Not used yet'].filter(Boolean).join(' · ') }),
+    init: c => ({ name: c?.name ?? '', visibility: c?.visibility ?? 'HR and employee', employeeCanUpload: c?.employeeCanUpload ?? false }),
+    body: (v, c) => ({ name: v['name'].trim(), visibility: v['visibility'], employeeCanUpload: !!v['employeeCanUpload'], sortOrder: c?.sortOrder ?? null }),
+    blocked: c => c.documentCount ? `${c.documentCount} document${c.documentCount === 1 ? ' is' : 's are'} filed as ${c.name}. Remove ${c.documentCount === 1 ? 'it' : 'them'} first.` : null,
+    reorder: true,
   },
   'exit-reasons': {
     path: 'exit-reasons', title: 'Exit reasons', singular: 'reason',

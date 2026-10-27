@@ -65,6 +65,7 @@ export class SettingsHubPage {
         r('Employment types', 'Probation and notice for each', 'employment-types', 'employment-types'),
         r('Custom fields', 'Extra details you keep', 'custom-fields', 'custom-fields'),
         r('Employee code', 'How new codes look', 'employee-code', 'employee-code'),
+        r('Document types', 'What you keep and who sees it', 'document-categories', 'document-categories'),
       ] },
       { title: 'Offboarding', rows: [
         r('Exit reasons', 'Why people leave', 'exit-reasons', 'exit-reasons'),
@@ -81,13 +82,13 @@ export class SettingsHubPage {
       firstValueFrom(this.access.roles().pipe(catchError(() => of(null)))),
     ]);
     if (!this.auth.can('org.manage')) { this.groups.set(this.build({ users: users ? String(users.totalCount) : '', roles: roles ? String(roles.length) : '' })); return; }
-    const [d, ds, l, g, t, cf, code, xr, xi] = await Promise.all([
+    const [d, ds, l, g, t, cf, code, xr, xi, dc] = await Promise.all([
       n('departments'), n('designations'), n('locations'), n('grades'), n('employment-types'), n('custom-fields', { includeInactive: true }),
       firstValueFrom(this.svc.get<{ nextCodePreview: string }>('employee-settings').pipe(catchError(() => of(null)))),
-      n('exit-reasons'), n('offboarding-items'),
+      n('exit-reasons'), n('offboarding-items'), n('document-categories'),
     ]);
     const c = (x: unknown[] | null) => x ? String(x.length) : '';
-    this.groups.set(this.build({ departments: c(d), designations: c(ds), locations: c(l), grades: c(g), 'employment-types': c(t), 'custom-fields': c(cf), 'employee-code': code?.nextCodePreview ?? '', 'exit-reasons': c(xr), 'offboarding-items': c(xi),
+    this.groups.set(this.build({ departments: c(d), designations: c(ds), locations: c(l), grades: c(g), 'employment-types': c(t), 'custom-fields': c(cf), 'employee-code': code?.nextCodePreview ?? '', 'exit-reasons': c(xr), 'offboarding-items': c(xi), 'document-categories': c(dc),
       users: users ? String(users.totalCount) : '', roles: roles ? String(roles.length) : '' }));
   }
 }

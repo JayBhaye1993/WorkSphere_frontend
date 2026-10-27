@@ -5,7 +5,7 @@ import { ApiResponse } from '../../core/models/api-response.model';
 import { fileNameFrom } from '../../core/util/download';
 import { ApiService } from '../../core/api/api.service';
 import { environment } from '../../../environments/environment';
-import { OrgPerson, PendingResignation, ChangeEntry, ExitCase, ExitInput, ExitReason, ImportPreview, ImportResult, CreateEmployee, CustomField, JobRecord, Department, Designation, DirectoryEntry, Employee, EmployeeSettings, EmploymentType, Grade, Location, Paged, UpdateEmployee, UpdateMyProfile } from '../../core/models/people.models';
+import { OrgPerson, PendingResignation, PersonDocuments, PersonDocument, ChangeEntry, ExitCase, ExitInput, ExitReason, ImportPreview, ImportResult, CreateEmployee, CustomField, JobRecord, Department, Designation, DirectoryEntry, Employee, EmployeeSettings, EmploymentType, Grade, Location, Paged, UpdateEmployee, UpdateMyProfile } from '../../core/models/people.models';
 
 @Injectable({ providedIn: 'root' })
 export class PeopleService {
@@ -90,6 +90,21 @@ export class PeopleService {
   pendingResignations(): Observable<PendingResignation[]> { return this.api.get<PendingResignation[]>(`${this.base}/employees/resignations`); }
   acceptResignation(id: string, lastWorkingDay: string, note: string | null): Observable<ExitCase> { return this.api.post<ExitCase>(`${this.base}/employees/${id}/exit/accept`, { lastWorkingDay, note }); }
   declineResignation(id: string, reason: string): Observable<ExitCase> { return this.api.post<ExitCase>(`${this.base}/employees/${id}/exit/decline`, { reason }); }
+
+  // ── Photo and documents ──
+  /** id null = your own photo. Returns the stored photo name. */
+  setPhoto(id: string | null, image: Blob): Observable<string> {
+    const f = new FormData(); f.append('file', image, 'photo.jpg');
+    return this.http.post<ApiResponse<string>>(`${this.base}/employees/${id ?? 'me'}/photo`, f).pipe(map(r => r.data as string));
+  }
+  removePhoto(id: string | null): Observable<boolean> { return this.api.delete<boolean>(`${this.base}/employees/${id ?? 'me'}/photo`); }
+  documents(id: string): Observable<PersonDocuments> { return this.api.get<PersonDocuments>(`${this.base}/employees/${id}/documents`); }
+  uploadDocument(id: string, file: File, categoryId: string, title: string | null): Observable<PersonDocument> {
+    const f = new FormData(); f.append('file', file, file.name); f.append('categoryId', categoryId); if (title) f.append('title', title);
+    return this.http.post<ApiResponse<PersonDocument>>(`${this.base}/employees/${id}/documents`, f).pipe(map(r => r.data as PersonDocument));
+  }
+  downloadDocument(id: string, doc: PersonDocument) { return this.file(`${this.base}/employees/${id}/documents/${doc.id}/file`, {}, doc.fileName); }
+  deleteDocument(id: string, docId: string): Observable<boolean> { return this.api.delete<boolean>(`${this.base}/employees/${id}/documents/${docId}`); }
 
   exitReasons(): Observable<ExitReason[]> { return this.api.get<ExitReason[]>(`${this.base}/exit-reasons`); }
 
