@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, input, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { LucideX } from '@lucide/angular';
@@ -109,7 +109,7 @@ const SECTIONS = ['Work', 'Personal', 'Other'];
     .type-btn:focus-visible { outline:2px solid #4f46e5; outline-offset:2px; }
   `],
 })
-export class CustomFieldEditPage implements OnInit {
+export class CustomFieldEditPage {
   readonly id = input<string | undefined>(undefined);
   private readonly svc = inject(SettingsService);
   private readonly router = inject(Router);
@@ -136,7 +136,14 @@ export class CustomFieldEditPage implements OnInit {
     ...(this.field() ? [{ key: 'act', label: 'In use', hint: 'Switch off to hide it everywhere but keep existing answers.', on: this.active(), set: (v: boolean) => this.active.set(v) }] : []),
   ]);
 
-  async ngOnInit() {
+  constructor() {
+    effect(() => { this.id(); untracked(() => void this.load()); });   // reused component: reload on a new id
+  }
+
+  private async load() {
+    this.loading.set(true); this.error.set(null); this.field.set(null); this.confirming.set(false); this.tried.set(false);
+    this.name.set(''); this.type.set('Text'); this.options.set([]); this.section.set('Work');
+    this.required.set(false); this.sensitive.set(false); this.editable.set(false); this.active.set(true);
     if (this.id()) {
       try {
         const all = await firstValueFrom(this.svc.list<CustomField>('custom-fields', { includeInactive: true }));

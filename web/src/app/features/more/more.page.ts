@@ -25,10 +25,10 @@ import { AvatarComponent } from '../../shared/avatar.component';
         <span class="flex-1 flex flex-col"><span>My profile</span><span class="text-[13px] font-normal text-slate-600">Phone, address, emergency contact</span></span>
         <svg lucideChevronRight [size]="16" class="text-slate-400" aria-hidden="true"></svg>
       </a>
-      @if (auth.can('org.manage')) {
+      @if (auth.can('org.manage') || auth.can('users.manage') || auth.can('roles.manage')) {
         <a routerLink="/more/settings" class="flex items-center gap-3 min-h-[56px] px-4 bg-white border border-slate-200 rounded-14 text-[15px] font-semibold text-slate-900 hover:bg-slate-50">
           <svg lucideSettings [size]="20" class="text-slate-600" aria-hidden="true"></svg>
-          <span class="flex-1 flex flex-col"><span>Company settings</span><span class="text-[13px] font-normal text-slate-600">Teams, titles, locations, grades, fields</span></span>
+          <span class="flex-1 flex flex-col"><span>Company settings</span><span class="text-[13px] font-normal text-slate-600">Teams, titles, fields, users and roles</span></span>
           <svg lucideChevronRight [size]="16" class="text-slate-400" aria-hidden="true"></svg>
         </a>
       }

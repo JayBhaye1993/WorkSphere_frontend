@@ -3,6 +3,8 @@ import { RouterLink } from '@angular/router';
 import { firstValueFrom, catchError, of } from 'rxjs';
 import { LucideArrowLeft, LucideChevronRight } from '@lucide/angular';
 import { SettingsService } from './settings.service';
+import { AuthService } from '../../core/auth/auth.service';
+import { AccessService } from '../access/access.service';
 
 interface Row { name: string; hint: string; link: string; count: string; }
 
@@ -33,21 +35,27 @@ interface Row { name: string; hint: string; link: string; count: string; }
             </ul>
           </section>
         }
-        <p class="m-0 px-1 text-[13px] text-slate-600">Roles, permissions and user logins get their own screens in a later piece.</p>
       </div>
     </div>
   `,
 })
 export class SettingsHubPage {
   private readonly svc = inject(SettingsService);
+  private readonly access = inject(AccessService);
+  private readonly auth = inject(AuthService);
   readonly groups = signal<{ title: string; rows: Row[] }[]>(this.build({}));
 
   constructor() { void this.counts(); }
 
   private build(c: Record<string, string>) {
     const r = (name: string, hint: string, link: string, key: string): Row => ({ name, hint, link: '/more/settings/' + link, count: c[key] ?? '' });
+    const org = this.auth.can('org.manage');
+    const access: Row[] = [
+      ...(this.auth.can('users.manage') ? [r('Users', 'Logins, invites, switched-off accounts', 'users', 'users')] : []),
+      r('Roles and permissions', 'Who can see and change what', 'roles', 'roles'),
+    ];
     return [
-      { title: 'Organisation', rows: [
+      ...(!org ? [] : [{ title: 'Organisation', rows: [
         r('Teams', 'Departments and sub-teams', 'departments', 'departments'),
         r('Job titles', 'Titles and their level', 'designations', 'designations'),
         r('Locations', 'Offices and time zones', 'locations', 'locations'),
@@ -57,17 +65,24 @@ export class SettingsHubPage {
         r('Employment types', 'Probation and notice for each', 'employment-types', 'employment-types'),
         r('Custom fields', 'Extra details you keep', 'custom-fields', 'custom-fields'),
         r('Employee code', 'How new codes look', 'employee-code', 'employee-code'),
-      ] },
+      ] }]),
+      { title: 'Access', rows: access },
     ];
   }
 
   private async counts() {
     const n = (p: string, params?: Record<string, unknown>) => firstValueFrom(this.svc.list<unknown>(p, params).pipe(catchError(() => of(null))));
+    const [users, roles] = await Promise.all([
+      this.auth.can('users.manage') ? firstValueFrom(this.access.users({ status: 'Active', pageSize: 1 }).pipe(catchError(() => of(null)))) : Promise.resolve(null),
+      firstValueFrom(this.access.roles().pipe(catchError(() => of(null)))),
+    ]);
+    if (!this.auth.can('org.manage')) { this.groups.set(this.build({ users: users ? String(users.totalCount) : '', roles: roles ? String(roles.length) : '' })); return; }
     const [d, ds, l, g, t, cf, code] = await Promise.all([
       n('departments'), n('designations'), n('locations'), n('grades'), n('employment-types'), n('custom-fields', { includeInactive: true }),
       firstValueFrom(this.svc.get<{ nextCodePreview: string }>('employee-settings').pipe(catchError(() => of(null)))),
     ]);
     const c = (x: unknown[] | null) => x ? String(x.length) : '';
-    this.groups.set(this.build({ departments: c(d), designations: c(ds), locations: c(l), grades: c(g), 'employment-types': c(t), 'custom-fields': c(cf), 'employee-code': code?.nextCodePreview ?? '' }));
+    this.groups.set(this.build({ departments: c(d), designations: c(ds), locations: c(l), grades: c(g), 'employment-types': c(t), 'custom-fields': c(cf), 'employee-code': code?.nextCodePreview ?? '',
+      users: users ? String(users.totalCount) : '', roles: roles ? String(roles.length) : '' }));
   }
 }

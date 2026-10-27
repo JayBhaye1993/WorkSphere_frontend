@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, input, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom, catchError, of } from 'rxjs';
 import { LucideX } from '@lucide/angular';
@@ -141,7 +141,7 @@ interface Form {
     </div>
   `,
 })
-export class PersonFormPage implements OnInit {
+export class PersonFormPage {
   /** Present when editing (route /people/:id/edit). */
   readonly id = input<string | undefined>(undefined);
 
@@ -217,7 +217,9 @@ export class PersonFormPage implements OnInit {
     return this.f().invite ? `Add ${who} and send invite` : `Add ${who}`;
   });
 
-  ngOnInit() { void this.load(); }   // route inputs are bound by now
+  constructor() {
+    effect(() => { this.id(); untracked(() => void this.load()); });   // reused component: reload on a new id
+  }
 
   set<K extends keyof Form>(k: K, v: Form[K]) { this.f.update(x => ({ ...x, [k]: v })); this.saveError.set(null); }
   setManager(p: PickedPerson | null) { this.set('manager', p); }
@@ -227,6 +229,7 @@ export class PersonFormPage implements OnInit {
   private snapshot() { return JSON.stringify([this.f(), this.custom()]); }
 
   private async load() {
+    this.loading.set(true); this.loadError.set(null); this.saveError.set(null); this.show.set(false); this.person.set(null);
     const opt = <T>(o: import('rxjs').Observable<T>, fallback: T) => firstValueFrom(o.pipe(catchError(() => of(fallback))));
     try {
       const [depts, desigs, locs, grades, types, fields, settings, person] = await Promise.all([
