@@ -5,17 +5,19 @@ import { firstValueFrom, catchError, of } from 'rxjs';
 import { LucideArrowLeft, LucideLock, LucideMail, LucidePhone } from '@lucide/angular';
 import { AuthService } from '../../../core/auth/auth.service';
 import { PeopleService } from '../people.service';
-import { CustomField, DirectoryEntry, Employee, JobRecord } from '../../../core/models/people.models';
+import { CustomField, DirectoryEntry, Employee, ExitCase, JobRecord } from '../../../core/models/people.models';
 import { AvatarComponent } from '../../../shared/avatar.component';
 import { errorText } from '../people-errors';
 import { CareerTimelineComponent } from '../career-timeline.component';
+import { ExitCardComponent } from '../exit/exit-card.component';
+import { fmtDay } from '../exit/exit-dates';
 
 interface Row { label: string; value?: string; chips?: string[]; mono?: boolean; }
 
 @Component({
   selector: 'ws-person',
   standalone: true,
-  imports: [RouterLink, AvatarComponent, CareerTimelineComponent, LucideArrowLeft, LucidePhone, LucideMail, LucideLock],
+  imports: [RouterLink, AvatarComponent, CareerTimelineComponent, ExitCardComponent, LucideArrowLeft, LucidePhone, LucideMail, LucideLock],
   template: `
     <div class="mx-auto max-w-[760px] pb-10">
       <header class="sticky top-0 z-10 h-14 px-1 bg-white flex items-center">
@@ -23,7 +25,7 @@ interface Row { label: string; value?: string; chips?: string[]; mono?: boolean;
                 class="w-11 h-11 flex items-center justify-center rounded-full hover:bg-slate-100 cursor-pointer">
           <svg lucideArrowLeft [size]="22" aria-hidden="true"></svg>
         </button>
-        @if (canEdit && full()) {
+        @if (canEdit && full() && card()?.status !== 'Exited') {
           <a [routerLink]="['/people', id(), 'edit']" class="ml-auto mr-2 h-10 px-4 rounded-10 border border-slate-300 bg-white text-[14px] font-semibold text-slate-900 flex items-center hover:bg-slate-50">Edit</a>
         }
       </header>
@@ -51,9 +53,16 @@ interface Row { label: string; value?: string; chips?: string[]; mono?: boolean;
             }
             <a [href]="'mailto:' + c.email" class="action"><svg lucideMail [size]="18" aria-hidden="true"></svg>Email</a>
           </div>
+          @if (c.leavingOn) {
+            <p class="mt-2 mb-0 w-full px-3 py-2 rounded-10 text-[14px] font-semibold" [class.banner-leaving]="c.status !== 'Exited'" [class.banner-left]="c.status === 'Exited'" role="status">
+              {{ c.status === 'Exited' ? 'Left on ' + day(c.leavingOn) : 'Leaving on ' + day(c.leavingOn) }}</p>
+          }
         </section>
 
         <div class="flex flex-col gap-3 px-4 pt-3">
+          @if (exit(); as x) {
+            @if (x.status !== 'Withdrawn') { <ws-exit-card [exit]="x" [name]="firstName()" (changed)="exitChanged($event)" /> }
+          }
           @if (chain().length) {
             <section class="card">
               <h2 class="card-h">Reports to</h2>
@@ -110,6 +119,10 @@ interface Row { label: string; value?: string; chips?: string[]; mono?: boolean;
             </section>
           }
 
+          @if (canStartExit()) {
+            <a [routerLink]="['/people', id(), 'exit']" class="self-center mt-2 min-h-[44px] px-4 flex items-center text-[14px] font-semibold text-red-700 no-underline rounded-10 hover:bg-red-50">Start exit</a>
+          }
+
           @if (!full()) {
             <p class="m-0 px-1 text-[13px] text-slate-600 leading-relaxed">You can see {{ firstName() }}’s contact details. The full profile is visible to their managers and HR.</p>
           }
@@ -126,6 +139,7 @@ interface Row { label: string; value?: string; chips?: string[]; mono?: boolean;
     .card-h { margin:0; font-size:13px; font-weight:600; color:#475569; text-transform:uppercase; letter-spacing:.06em; }
     .facts { margin:0; display:grid; grid-template-columns:120px 1fr; row-gap:10px; column-gap:8px; font-size:14px; }
     .facts dt { color:#475569; } .facts dd { margin:0; min-width:0; overflow-wrap:anywhere; }
+    .banner-leaving { background:#fef3c7; color:#92400e; } .banner-left { background:#f1f5f9; color:#334155; }
     .tag { padding:2px 8px; border-radius:999px; background:#f1f5f9; font-size:12px; font-weight:600; color:#334155; }
   `],
 })
@@ -136,7 +150,9 @@ export class PersonPage {
   private readonly people = inject(PeopleService);
   private readonly location = inject(Location);
   private readonly router = inject(Router);
-  readonly canEdit = inject(AuthService).can('employees.edit');
+  private readonly auth = inject(AuthService);
+  readonly canEdit = this.auth.can('employees.edit');
+  readonly canExit = this.auth.can('employees.exit');
 
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
@@ -145,6 +161,10 @@ export class PersonPage {
   readonly fields = signal<CustomField[]>([]);
   readonly chain = signal<DirectoryEntry[]>([]);
   readonly steps = signal<JobRecord[]>([]);
+  readonly exit = signal<ExitCase | null>(null);
+  /** HR, someone still here, no exit in progress, and not their own profile. */
+  readonly canStartExit = computed(() => this.canExit && !!this.full() && this.card()?.status !== 'Exited'
+    && (!this.exit() || this.exit()!.status === 'Withdrawn') && this.card()?.email !== this.auth.user()?.email);
 
   readonly firstName = computed(() => this.card()?.fullName.split(' ')[0] ?? '');
   readonly titleLine = computed(() => [this.card()?.designationName, this.card()?.departmentName].filter(Boolean).join(' · '));
@@ -178,12 +198,21 @@ export class PersonPage {
     effect(() => { const id = this.id(); void this.load(id); }, { allowSignalWrites: true });
   }
 
+  day(iso: string) { return fmtDay(iso); }
+
+  /** A tick only updates the card; completing or withdrawing changes the profile, so reload it. */
+  exitChanged(x: ExitCase) {
+    const was = this.exit()?.status;
+    this.exit.set(x);
+    if (x.status !== was) void this.load(this.id());
+  }
+
   back() {
     if (history.length > 1) this.location.back(); else void this.router.navigate(['/people']);
   }
 
   private async load(id: string) {
-    this.loading.set(true); this.error.set(null); this.full.set(null); this.chain.set([]); this.steps.set([]);
+    this.loading.set(true); this.error.set(null); this.full.set(null); this.chain.set([]); this.steps.set([]); this.exit.set(null);
     try {
       const [card, full, fields] = await Promise.all([
         firstValueFrom(this.people.card(id)),
@@ -193,6 +222,7 @@ export class PersonPage {
       this.card.set(card); this.full.set(full); this.fields.set(fields);
       this.loading.set(false);
       if (full) firstValueFrom(this.people.timeline(id)).then(s => { if (this.id() === id) this.steps.set(s); }).catch(() => {});
+      if (full || this.canExit) firstValueFrom(this.people.exit(id)).then(x => { if (this.id() === id) this.exit.set(x); }).catch(() => {});
       // Reporting line, up to three levels.
       const chain: DirectoryEntry[] = [];
       let next = card.managerId;

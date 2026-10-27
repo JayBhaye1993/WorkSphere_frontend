@@ -1,7 +1,7 @@
 import { Component, ElementRef, computed, inject, input, signal, viewChild, effect } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { LucideArrowLeft, LucidePlus, LucideTrash2, LucideX } from '@lucide/angular';
+import { LucideArrowDown, LucideArrowLeft, LucideArrowUp, LucidePlus, LucideTrash2, LucideX } from '@lucide/angular';
 import { SettingsService } from './settings.service';
 import { FieldDef, KINDS, KindDef } from './org-kinds';
 import { ToastService } from '../../core/services/toast.service';
@@ -12,7 +12,7 @@ type Sheet = { mode: 'edit'; item: any | null } | { mode: 'delete'; item: any; r
 /** One screen for every simple company list: teams, job titles, locations, grades, employment types. */
 @Component({
   standalone: true,
-  imports: [RouterLink, LucideArrowLeft, LucidePlus, LucideTrash2, LucideX],
+  imports: [RouterLink, LucideArrowLeft, LucideArrowUp, LucideArrowDown, LucidePlus, LucideTrash2, LucideX],
   template: `
     <div class="mx-auto max-w-[720px] min-h-full">
       <header class="sticky top-0 z-10 h-14 px-1 bg-white border-b border-slate-200 flex items-center gap-1">
@@ -39,7 +39,7 @@ type Sheet = { mode: 'edit'; item: any | null } | { mode: 'delete'; item: any; r
             <div class="p-6 rounded-14 bg-white border border-slate-200 text-center text-[14px] text-slate-600">No {{ def()!.singular }}s yet. Tap Add to create the first one.</div>
           } @else {
             <ul class="list-none m-0 p-0 flex flex-col gap-2.5">
-              @for (r of rows(); track r.item.id) {
+              @for (r of rows(); track r.item.id; let i = $index, first = $first, last = $last) {
                 <li class="flex items-center gap-1 pl-4 pr-1 py-2 rounded-14 bg-white border border-slate-200" [class.opacity-70]="r.view.muted">
                   <button type="button" (click)="openEdit(r.item)" class="flex-1 min-w-0 min-h-[52px] text-left bg-transparent border-0 p-0 cursor-pointer flex flex-col justify-center gap-1">
                     <span class="flex items-center gap-2 text-[15px] font-semibold text-slate-900">{{ r.view.title }}
@@ -47,6 +47,12 @@ type Sheet = { mode: 'edit'; item: any | null } | { mode: 'delete'; item: any; r
                     </span>
                     <span class="text-[13px] text-slate-600">{{ r.view.sub }}</span>
                   </button>
+                  @if (def()!.reorder) {
+                    <button type="button" (click)="move(i, -1)" [disabled]="first || busy()" [attr.aria-label]="'Move ' + r.view.title + ' up'"
+                            class="w-10 h-11 flex items-center justify-center rounded-full bg-transparent border-0 text-slate-600 hover:bg-slate-100 cursor-pointer disabled:opacity-30 disabled:cursor-default"><svg lucideArrowUp [size]="17" aria-hidden="true"></svg></button>
+                    <button type="button" (click)="move(i, 1)" [disabled]="last || busy()" [attr.aria-label]="'Move ' + r.view.title + ' down'"
+                            class="w-10 h-11 flex items-center justify-center rounded-full bg-transparent border-0 text-slate-600 hover:bg-slate-100 cursor-pointer disabled:opacity-30 disabled:cursor-default"><svg lucideArrowDown [size]="17" aria-hidden="true"></svg></button>
+                  }
                   <button type="button" (click)="openDelete(r.item)" [attr.aria-label]="'Delete ' + r.view.title"
                           class="w-11 h-11 flex items-center justify-center rounded-full bg-transparent border-0 text-slate-600 hover:bg-slate-100 cursor-pointer">
                     <svg lucideTrash2 [size]="18" aria-hidden="true"></svg>
@@ -105,7 +111,7 @@ type Sheet = { mode: 'edit'; item: any | null } | { mode: 'delete'; item: any; r
               <p class="m-0 text-[15px] leading-relaxed text-slate-700">{{ s.reason }}</p>
               <button type="button" (click)="close()" class="ws-btn ws-btn-ghost">OK</button>
             } @else {
-              <p class="m-0 text-[15px] leading-relaxed text-slate-700">No one uses it. You can add it again later.</p>
+              <p class="m-0 text-[15px] leading-relaxed text-slate-700">{{ def()!.deleteNote ? def()!.deleteNote!(s.item) : 'No one uses it. You can add it again later.' }}</p>
               <button type="button" (click)="confirmDelete()" [disabled]="busy()" class="ws-btn text-white bg-red-600 hover:opacity-90">{{ busy() ? 'Deleting…' : 'Delete' }}</button>
               <button type="button" (click)="close()" class="ws-btn ws-btn-ghost">Keep it</button>
             }
@@ -210,6 +216,19 @@ export class OrgListPage {
       this.sheetError.set(errorText(e, 'Could not save. Please try again.'));
       this.busy.set(false);
     }
+  }
+
+  /** Moves an item one place up or down and saves the whole order. */
+  async move(index: number, by: -1 | 1) {
+    const ids = this.rows().map(r => r.item.id);
+    const j = index + by; if (j < 0 || j >= ids.length) return;
+    [ids[index], ids[j]] = [ids[j], ids[index]];
+    const before = this.items();
+    this.items.set(before.map(x => ({ ...x, sortOrder: ids.indexOf(x.id) + 1 })));   // move it on screen straight away
+    this.busy.set(true);
+    try { await firstValueFrom(this.svc.put(`${this.def()!.path}/order`, { ids })); }
+    catch (e) { this.items.set(before); this.toast.show(errorText(e, 'Could not change the order.')); await this.load(); }
+    finally { this.busy.set(false); }
   }
 
   async confirmDelete() {

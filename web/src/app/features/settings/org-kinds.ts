@@ -23,8 +23,13 @@ export interface KindDef {
   body: (v: Record<string, any>, item: any | null) => unknown;
   /** Why it cannot be deleted right now, or null. */
   blocked: (item: any, all: any[]) => string | null;
+  /** What deleting means (default: no one uses it). */
+  deleteNote?: (item: any) => string;
+  /** The list has a meaningful order the company sets (up/down buttons; PUT {path}/order with all ids). */
+  reorder?: boolean;
 }
 
+const OWNERS: Option[] = ['HR', 'Manager', 'IT', 'Finance', 'Employee'].map(o => ({ value: o, label: o === 'Employee' ? 'The person leaving' : o }));
 const people = (n: number) => n === 0 ? 'Not used yet' : n === 1 ? '1 person' : `${n} people`;
 const num = (v: any) => v === '' || v === null || v === undefined ? 0 : Number(v);
 
@@ -132,5 +137,33 @@ export const KINDS: Record<string, KindDef> = {
     body: v => ({ name: v['name'].trim(), description: v['description'].trim() || null, probationMonths: num(v['probationMonths']), noticePeriodDays: num(v['noticePeriodDays']), isDefault: !!v['isDefault'] }),
     blocked: t => t.isDefault ? `${t.name} is the default. Make another type the default first.`
       : t.employeeCount ? `${people(t.employeeCount)} ${t.employeeCount === 1 ? 'is' : 'are'} on ${t.name}. Move them to another type first.` : null,
+  },
+  'exit-reasons': {
+    path: 'exit-reasons', title: 'Exit reasons', singular: 'reason',
+    intro: 'Why people leave. HR picks one when starting an exit; it feeds attrition reports later.',
+    fields: [{ key: 'name', label: 'Reason', type: 'text', required: true, placeholder: 'e.g. Better opportunity' }],
+    sort: (a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name),
+    row: r => ({ title: r.name, sub: r.usageCount === 0 ? 'Not used yet' : r.usageCount === 1 ? 'Given for 1 exit' : `Given for ${r.usageCount} exits` }),
+    init: r => ({ name: r?.name ?? '' }),
+    body: (v, r) => ({ name: v['name'].trim(), sortOrder: r?.sortOrder ?? null }),
+    blocked: () => null,
+    deleteNote: r => r.usageCount ? `Past exits keep "${r.name}" as their reason; it just won't be offered for new ones.` : 'No one has used it. You can add it again later.',
+    reorder: true,
+  },
+  'offboarding-items': {
+    path: 'offboarding-items', title: 'Offboarding checklist', singular: 'checklist item',
+    intro: 'Every new exit gets these steps, in this order. Changes here don\u2019t affect exits already started.',
+    fields: [
+      { key: 'name', label: 'What needs doing', type: 'text', required: true, placeholder: 'e.g. Return access card' },
+      { key: 'owner', label: 'Who looks after it', type: 'select', required: true, options: () => OWNERS },
+      { key: 'isActive', label: 'Add to new exits', type: 'checkbox', editOnly: true, hint: 'Switch off to keep it but stop adding it.' },
+    ],
+    sort: (a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name),
+    row: t => ({ title: t.name, sub: t.owner, badge: t.isActive ? undefined : 'Off', muted: !t.isActive }),
+    init: t => ({ name: t?.name ?? '', owner: t?.owner ?? 'HR', isActive: t?.isActive ?? true }),
+    body: (v, t) => ({ name: v['name'].trim(), owner: v['owner'], isActive: !!v['isActive'], sortOrder: t?.sortOrder ?? null }),
+    blocked: () => null,
+    deleteNote: () => 'Exits already started keep their own copy of this step.',
+    reorder: true,
   },
 };

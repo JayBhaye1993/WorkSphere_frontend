@@ -40,6 +40,13 @@ const PAGE = 30;
             </button>
           }
         </label>
+        @if (canExit) {
+          <div role="group" aria-label="Show" class="grid grid-cols-3 p-1 rounded-12 bg-slate-100">
+            @for (o of shows; track o.id) {
+              <button type="button" (click)="setShow(o.id)" [attr.aria-pressed]="show() === o.id" class="seg" [class.seg-on]="show() === o.id">{{ o.label }}</button>
+            }
+          </div>
+        }
         @if (chips().length > 1) {
           <div role="group" aria-label="Filter by team" class="chips flex gap-2 overflow-x-auto -mx-4 px-4">
             @for (c of chips(); track c.id) {
@@ -70,8 +77,15 @@ const PAGE = 30;
         <p class="mx-4 mt-3 mb-2 text-[13px] text-slate-600" aria-live="polite">{{ summary() }}</p>
         @if (items().length === 0) {
           <div class="mx-4 p-6 rounded-14 bg-white border border-slate-200 text-center flex flex-col gap-2 items-center">
-            <p class="m-0 text-[15px] font-semibold">No one matches “{{ searchText() }}”</p>
-            <p class="m-0 text-[13px] text-slate-600">Try a first name, a job title or a skill.</p>
+            @if (searchText()) {
+              <p class="m-0 text-[15px] font-semibold">No one matches “{{ searchText() }}”</p>
+              <p class="m-0 text-[13px] text-slate-600">Try a first name, a job title or a skill.</p>
+            } @else if (show() === 'leaving') {
+              <p class="m-0 text-[15px] font-semibold">No one is serving notice</p>
+              <p class="m-0 text-[13px] text-slate-600">Start an exit from someone’s profile.</p>
+            } @else {
+              <p class="m-0 text-[15px] font-semibold">No one here yet</p>
+            }
           </div>
         } @else {
           <ul class="list-none m-0 p-0 bg-white border-y border-slate-200">
@@ -80,7 +94,12 @@ const PAGE = 30;
                 <a [routerLink]="['/people', p.id]" class="row">
                   <ws-avatar [name]="p.fullName" [photo]="p.profilePhotoUrl" />
                   <span class="flex-1 min-w-0 flex flex-col gap-0.5">
-                    <span class="text-[15px] font-semibold text-slate-900">{{ p.fullName }}</span>
+                    <span class="flex items-center gap-2 min-w-0">
+                      <span class="text-[15px] font-semibold text-slate-900 truncate">{{ p.fullName }}</span>
+                      @if (p.leavingOn) {
+                        <span class="shrink-0 px-2 py-px rounded-full text-[11px] font-bold" [class.leaving]="p.status !== 'Exited'" [class.left]="p.status === 'Exited'">{{ p.status === 'Exited' ? 'Left ' + day(p.leavingOn, true) : 'Leaving ' + day(p.leavingOn) }}</span>
+                      }
+                    </span>
                     <span class="text-[13px] text-slate-600 truncate">{{ line(p) }}</span>
                   </span>
                   <svg lucideChevronRight [size]="16" class="text-slate-400 shrink-0" aria-hidden="true"></svg>
@@ -109,12 +128,21 @@ const PAGE = 30;
     .chip:focus-visible, .row:focus-visible { outline:2px solid #4f46e5; outline-offset:2px; }
     .row { display:flex; align-items:center; gap:12px; min-height:64px; padding:8px 16px; color:inherit; text-decoration:none; }
     .row:hover { background:#f8fafc; }
+    .seg { height:36px; border-radius:10px; border:0; font-size:14px; cursor:pointer; background:transparent; color:#475569; font-weight:500; }
+    .seg-on { background:#fff; color:#0f172a; font-weight:600; box-shadow:0 1px 2px rgba(15,23,42,.08); }
+    .seg:focus-visible { outline:2px solid #4f46e5; outline-offset:1px; }
+    .leaving { background:#fef3c7; color:#92400e; } .left { background:#f1f5f9; color:#475569; }
   `],
 })
 export class DirectoryPage {
   private readonly people = inject(PeopleService);
   private readonly destroyRef = inject(DestroyRef);
-  readonly canAdd = inject(AuthService).can('employees.create');
+  private readonly auth = inject(AuthService);
+  readonly canAdd = this.auth.can('employees.create');
+  /** HR: see who is serving notice and who has left. */
+  readonly canExit = this.auth.can('employees.exit');
+  readonly shows = [{ id: null, label: 'Everyone' }, { id: 'leaving', label: 'Leaving' }, { id: 'former', label: 'Former' }] as const;
+  readonly show = signal<'leaving' | 'former' | null>(null);
 
   readonly searchText = signal('');
   readonly dept = signal<string | null>(null);
@@ -132,17 +160,19 @@ export class DirectoryPage {
 
   /** "All" plus top-level teams that have people, biggest first; counts include sub-teams. */
   readonly chips = computed<Chip[]>(() => [
-    { id: null, name: 'All', count: this.allTotal() },
+    { id: null, name: 'All', count: this.show() ? null : this.allTotal() },
     ...this.departments()
       .filter(d => !d.parentDepartmentId && d.teamEmployeeCount > 0)
       .sort((a, b) => b.teamEmployeeCount - a.teamEmployeeCount || a.name.localeCompare(b.name))
-      .map(d => ({ id: d.id, name: d.name, count: d.teamEmployeeCount })),
+      .map(d => ({ id: d.id, name: d.name, count: this.show() ? null : d.teamEmployeeCount })),
   ]);
 
   readonly summary = computed(() => {
     const n = this.total();
     const people = n === 1 ? '1 person' : `${n} people`;
     const team = this.departments().find(d => d.id === this.dept())?.name;
+    const what = this.show() === 'leaving' ? `${people} serving notice` : this.show() === 'former' ? (n === 1 ? '1 former employee' : `${n} former employees`) : null;
+    if (what) return `${what}${this.searchText() ? ` matching “${this.searchText()}”` : ''}${team ? ' in ' + team : ''}`;
     if (this.searchText()) return `${people} matching “${this.searchText()}”${team ? ' in ' + team : ''}`;
     return team ? `${people} in ${team}` : people;
   });
@@ -152,14 +182,14 @@ export class DirectoryPage {
       .subscribe(() => this.reload$.next());
     this.reload$.pipe(
       tap(() => { this.loading.set(true); this.error.set(null); }),
-      switchMap(() => this.people.directory({ search: this.searchText(), departmentId: this.dept(), page: 1, pageSize: PAGE })
+      switchMap(() => this.people.directory({ search: this.searchText(), departmentId: this.dept(), page: 1, pageSize: PAGE, show: this.show() })
         .pipe(catchError(e => { this.error.set(errorText(e, 'Could not load people. Please try again.')); return of(null); }))),
       takeUntilDestroyed(),
     ).subscribe(r => {
       this.loading.set(false);
       if (!r) return;
       this.items.set(r.items); this.total.set(r.totalCount); this.page = 1;
-      if (!this.searchText() && !this.dept()) this.allTotal.set(r.totalCount);
+      if (!this.searchText() && !this.dept() && !this.show()) this.allTotal.set(r.totalCount);
     });
     this.people.departments().pipe(catchError(() => of([] as Department[])), takeUntilDestroyed())
       .subscribe(d => this.departments.set(d));
@@ -167,11 +197,16 @@ export class DirectoryPage {
   }
 
   typed(v: string) { this.searchText.set(v); this.typing$.next(v.trim()); }
+  setShow(s: 'leaving' | 'former' | null) { if (this.show() !== s) { this.show.set(s); this.reload$.next(); } }
+  day(iso: string, year = false) {
+    // A calendar day: read the date part only, whether or not the server added a time zone.
+    return new Date(iso.slice(0, 10) + 'T00:00:00Z').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', ...(year ? { year: 'numeric' } : {}), timeZone: 'UTC' });
+  }
   pick(id: string | null) { if (this.dept() !== id) { this.dept.set(id); this.reload$.next(); } }
 
   more() {
     this.loadingMore.set(true);
-    this.people.directory({ search: this.searchText(), departmentId: this.dept(), page: this.page + 1, pageSize: PAGE })
+    this.people.directory({ search: this.searchText(), departmentId: this.dept(), page: this.page + 1, pageSize: PAGE, show: this.show() })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: r => { this.page++; this.items.update(x => [...x, ...r.items]); this.total.set(r.totalCount); this.loadingMore.set(false); },

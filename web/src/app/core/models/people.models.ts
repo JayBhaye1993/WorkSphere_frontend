@@ -12,6 +12,10 @@ export interface DirectoryEntry {
   profilePhotoUrl: string | null;
   employeeCode: string;
   locationName: string | null;
+  /** Active or Exited. */
+  status?: string;
+  /** Last working day: while serving notice, or the day they left. Only for HR, the person and their managers. */
+  leavingOn?: string | null;
 }
 
 /** Full profile; personal fields arrive only for the person, HR, or anyone with employees.sensitive. */
@@ -118,6 +122,21 @@ export interface JobRecord {
   gradeName: string | null; locationName: string | null; employmentTypeName: string | null;
   recordedByName: string; recordedAt: string;
 }
+
+export interface ExitTask { id: string; title: string; owner: string; done: boolean; doneAt: string | null; doneByName: string | null; note: string | null; }
+
+/** One exit (GET /employees/{id}/exit). note and rehireEligible are HR-only (null for others). */
+export interface ExitCase {
+  id: string; employeeId: string; exitType: string; noticeDate: string; lastWorkingDay: string;
+  noticePeriodDays: number; shortenedByDays: number; reasonId: string | null; reasonName: string | null;
+  note: string | null; rehireEligible: boolean | null; status: 'Serving' | 'Completed' | 'Withdrawn';
+  startedByName: string; startedAt: string; closedAt: string | null; closedByName: string | null; withdrawNote: string | null;
+  daysLeft: number; tasksDone: number; tasks: ExitTask[]; canManage: boolean;
+}
+export interface ExitInput { exitType: string; noticeDate: string; lastWorkingDay: string; reasonId: string | null; note: string | null; rehireEligible?: boolean | null; }
+export interface ExitReason { id: string; name: string; sortOrder: number; usageCount: number; }
+export const EXIT_TYPES = ['Resignation', 'Termination', 'Retirement', 'Contract end', 'Other'] as const;
+export const TASK_OWNERS = ['HR', 'Manager', 'IT', 'Finance', 'Employee'] as const;
 
 export const CHANGE_REASONS = ['Promotion', 'Transfer', 'Manager change', 'Role change', 'Relocation', 'Correction'] as const;
 
