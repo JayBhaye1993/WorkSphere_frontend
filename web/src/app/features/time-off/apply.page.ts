@@ -89,6 +89,14 @@ type DayPart = 'Full' | 'First' | 'Second';
             <textarea class="ws-input" rows="3" maxlength="1000" [value]="reason()" (input)="reason.set($any($event.target).value)" placeholder="e.g. Family function in Nashik"></textarea>
           </label>
 
+          <div class="ws-field">Supporting document <span class="hint">{{ preview()?.needsDocument ? 'Needed for this length: a doctor’s note or similar.' : 'Optional. PDF, photo, Word or Excel, up to 10 MB.' }}</span>
+            <label class="flex items-center gap-3 min-h-[48px] px-3 rounded-10 border border-dashed border-slate-300 bg-white cursor-pointer font-normal text-[15px]" [class.!border-amber-400]="preview()?.needsDocument && !file()">
+              <input type="file" class="sr-only" accept=".pdf,.jpg,.jpeg,.png,.webp,.docx,.xlsx" (change)="pickFile($event)" />
+              <span class="flex-1 truncate" [class.text-slate-500]="!file()">{{ file()?.name ?? 'Choose a file' }}</span>
+              @if (file()) { <button type="button" (click)="$event.preventDefault(); file.set(null)" class="h-8 px-2 bg-transparent border-0 text-[13px] font-semibold text-slate-600 cursor-pointer">Remove</button> }
+            </label>
+          </div>
+
           @if (preview(); as p) {
             <section class="p-4 rounded-14 border flex flex-col gap-3" [class]="p.error ? 'bg-rose-50 border-rose-200' : 'bg-white border-slate-200'" aria-live="polite">
               <div class="flex items-end gap-3">
@@ -147,6 +155,12 @@ export class ApplyPage {
   readonly preview = signal<LeavePreview | null>(null); readonly previewing = signal(false);
   readonly showDays = signal(false);
   readonly saving = signal(false); readonly submitError = signal<string | null>(null);
+  readonly file = signal<File | null>(null);
+  pickFile(e: Event) {
+    const f = (e.target as HTMLInputElement).files?.[0] ?? null;
+    if (f && f.size > 10 * 1024 * 1024) { this.submitError.set('Files can be up to 10 MB.'); return; }
+    this.file.set(f);
+  }
 
   readonly type = computed(() => this.types().find(t => t.id === this.typeId()) ?? null);
   readonly single = computed(() => this.from() === this.to());
@@ -235,6 +249,11 @@ export class ApplyPage {
     this.saving.set(true); this.submitError.set(null);
     try {
       const r = await firstValueFrom(this.svc.apply({ employeeId: this.forId, leaveTypeId: this.typeId()!, from: this.from(), to: this.to(), ...this.halves(), reason: this.reason().trim() || null }));
+      const f = this.file();
+      if (f) {
+        try { await firstValueFrom(this.svc.attach(r.id, f)); }
+        catch (e) { this.toast.show(`Request sent, but the document didn’t upload: ${errorText(e, 'try again from Time off')}`, 'error'); void this.router.navigate(this.back()); return; }
+      }
       this.toast.show(this.forId ? `Added for ${this.forName()}` : `Request sent · ${days(r.days)}`);
       void this.router.navigate(this.back());
     } catch (e) { this.submitError.set(errorText(e, 'Could not send the request.')); }

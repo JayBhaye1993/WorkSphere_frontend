@@ -1,3 +1,4 @@
+import { SkeletonComponent } from '../../shared/skeleton.component';
 import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink } from '@angular/router';
@@ -14,7 +15,7 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 /** Everyone who can sign in: active logins, pending invites, switched-off logins. */
 @Component({
   standalone: true,
-  imports: [RouterLink, AvatarComponent, LucideArrowLeft, LucideChevronRight, LucideSearch, LucideUserPlus, LucideX],
+  imports: [SkeletonComponent, RouterLink, AvatarComponent, LucideArrowLeft, LucideChevronRight, LucideSearch, LucideUserPlus, LucideX],
   template: `
     <div class="mx-auto max-w-[720px] min-h-full">
       <header class="sticky top-0 z-10 bg-white border-b border-slate-200">
@@ -42,7 +43,7 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       </header>
 
       @if (loading()) {
-        <p class="p-4 text-[14px] text-slate-600">Loading…</p>
+        <ws-skeleton class="block p-4" kind="form" [rows]="4" />
       } @else if (error()) {
         <div class="m-4 ws-alert" role="alert">{{ error() }}</div>
       } @else if (!users().length) {

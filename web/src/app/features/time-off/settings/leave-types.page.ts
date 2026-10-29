@@ -1,3 +1,4 @@
+import { SkeletonComponent } from '../../../shared/skeleton.component';
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -11,7 +12,7 @@ import { ToastService } from '../../../core/services/toast.service';
 /** Settings › Time off types: the kinds of leave the company offers, in the order people see them. */
 @Component({
   standalone: true,
-  imports: [RouterLink, LucideArrowLeft, LucideChevronDown, LucideChevronRight, LucideChevronUp, LucidePlus],
+  imports: [SkeletonComponent, RouterLink, LucideArrowLeft, LucideChevronDown, LucideChevronRight, LucideChevronUp, LucidePlus],
   template: `
     <div class="mx-auto max-w-[720px] min-h-full pb-8">
       <header class="sticky top-0 z-10 h-14 px-1 bg-white border-b border-slate-200 flex items-center gap-1">
@@ -21,7 +22,7 @@ import { ToastService } from '../../../core/services/toast.service';
       </header>
       <div class="p-4 flex flex-col gap-3">
         <p class="m-0 px-1 text-[13px] text-slate-600">Balances are worked out from these rules, so a change applies to everyone straight away.</p>
-        @if (loading()) { <p class="m-0 text-[14px] text-slate-600">Loading…</p> }
+        @if (loading()) { <ws-skeleton [rows]="5" /> }
         @else if (error()) { <div class="ws-alert" role="alert">{{ error() }}</div> }
         @else {
           <ul class="list-none m-0 p-0 bg-white border border-slate-200 rounded-14 overflow-hidden">

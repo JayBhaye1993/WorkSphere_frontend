@@ -1,3 +1,4 @@
+import { SkeletonComponent } from '../../../shared/skeleton.component';
 import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom, catchError, of } from 'rxjs';
@@ -25,7 +26,7 @@ interface Form {
  */
 @Component({
   standalone: true,
-  imports: [RouterLink, CustomFieldInputComponent, PersonPickerComponent, LucideX],
+  imports: [SkeletonComponent, RouterLink, CustomFieldInputComponent, PersonPickerComponent, LucideX],
   template: `
     <div class="mx-auto max-w-[640px] min-h-full flex flex-col">
       <header class="sticky top-0 z-30 h-14 px-1 bg-white border-b border-slate-200 flex items-center gap-1">
@@ -37,7 +38,7 @@ interface Form {
       </header>
 
       @if (loading()) {
-        <p class="p-4 text-[14px] text-slate-600">Loading…</p>
+        <ws-skeleton class="block p-4" kind="form" [rows]="4" />
       } @else if (loadError()) {
         <div class="m-4 ws-alert" role="alert">{{ loadError() }}</div>
       } @else {

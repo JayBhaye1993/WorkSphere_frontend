@@ -1,3 +1,4 @@
+import { SkeletonComponent } from '../../../shared/skeleton.component';
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom, catchError, of } from 'rxjs';
@@ -11,14 +12,14 @@ import { addDays, daysBetween, fmtDay, todayIst } from '../exit/exit-dates';
 /** An employee resigns: proposed last day (notice period pre-filled), reason, a message to their manager. */
 @Component({
   standalone: true,
-  imports: [RouterLink, LucideX],
+  imports: [SkeletonComponent, RouterLink, LucideX],
   template: `
     <div class="mx-auto max-w-[640px] min-h-full flex flex-col">
       <header class="sticky top-0 z-30 h-14 px-1 bg-white border-b border-slate-200 flex items-center gap-1">
         <a routerLink="/more/profile" aria-label="Close without sending" class="w-11 h-11 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-900"><svg lucideX [size]="22" aria-hidden="true"></svg></a>
         <h1 class="m-0 text-[18px] font-bold">Resign</h1>
       </header>
-      @if (loading()) { <p class="p-4 text-[14px] text-slate-600">Loading…</p> }
+      @if (loading()) { <ws-skeleton class="block p-4" kind="form" [rows]="4" /> }
       @else if (loadError()) { <div class="m-4 ws-alert" role="alert">{{ loadError() }}</div> }
       @else {
         <form class="flex-1 p-4 flex flex-col gap-4" (submit)="$event.preventDefault(); submit()" novalidate>

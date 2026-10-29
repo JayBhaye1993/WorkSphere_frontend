@@ -1,3 +1,4 @@
+import { SkeletonComponent } from '../../shared/skeleton.component';
 import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -12,14 +13,14 @@ const SCOPE_LABEL: Record<string, string> = { own: 'Own', team: 'Team', all: 'Al
 /** Create or edit a role: name, description and its permissions, each with a scope where it has one. */
 @Component({
   standalone: true,
-  imports: [RouterLink, LucideX],
+  imports: [SkeletonComponent, RouterLink, LucideX],
   template: `
     <div class="mx-auto max-w-[720px] min-h-full flex flex-col">
       <header class="sticky top-0 z-10 h-14 px-1 bg-white border-b border-slate-200 flex items-center gap-1">
         <a routerLink="/more/settings/roles" aria-label="Close" class="w-11 h-11 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-900"><svg lucideX [size]="22" aria-hidden="true"></svg></a>
         <h1 class="m-0 flex-1 text-[18px] font-bold truncate">{{ role() ? role()!.name : 'New role' }}</h1>
       </header>
-      @if (loading()) { <p class="p-4 text-[14px] text-slate-600">Loading…</p> }
+      @if (loading()) { <ws-skeleton class="block p-4" kind="form" [rows]="4" /> }
       @else {
         <form class="flex-1 p-4 flex flex-col gap-4" (submit)="$event.preventDefault(); save()" novalidate>
           @if (error()) { <div class="ws-alert" role="alert">{{ error() }}</div> }

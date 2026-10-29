@@ -14,7 +14,7 @@ import { num } from './time-off-format';
         <span class="flex items-baseline gap-1"><span class="text-[26px] font-bold leading-none">{{ n(x.used + x.pending) }}</span><span class="text-[13px] text-slate-600">taken</span></span>
         <span class="text-[12px] text-slate-600">No limit@if (!x.isPaid) { · unpaid }</span>
       } @else {
-        <span class="flex items-baseline gap-1"><span class="text-[26px] font-bold leading-none" [class.text-rose-700]="(x.available ?? 0) <= 0">{{ n(x.available) }}</span><span class="text-[13px] text-slate-600">left</span></span>
+        <span class="flex items-baseline gap-1"><span class="text-[26px] font-bold leading-none" [class.text-rose-700]="(x.available ?? 0) < 0 || ((x.available ?? 0) === 0 && x.used + x.pending > 0)">{{ n(x.available) }}</span><span class="text-[13px] text-slate-600">left</span></span>
         @if (total() > 0) {
           <span class="h-1.5 rounded-full bg-slate-100 overflow-hidden flex" aria-hidden="true">
             <span class="h-full" [style.width.%]="pct(x.used)" [style.background]="x.color"></span>

@@ -1,3 +1,4 @@
+import { SkeletonComponent } from '../../../shared/skeleton.component';
 import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { Location } from '@angular/common';
 import { Router } from '@angular/router';
@@ -13,7 +14,7 @@ interface Batch { id: string; at: string; by: string; source: string; rows: Chan
 /** Everything that happened to a profile: career steps, and every saved change with who and when. */
 @Component({
   standalone: true,
-  imports: [CareerTimelineComponent, LucideArrowLeft, LucideLock],
+  imports: [SkeletonComponent, CareerTimelineComponent, LucideArrowLeft, LucideLock],
   template: `
     <div class="mx-auto max-w-[720px] min-h-full">
       <header class="sticky top-0 z-10 bg-white border-b border-slate-200">
@@ -33,7 +34,7 @@ interface Batch { id: string; at: string; by: string; source: string; rows: Chan
       </header>
 
       <div class="p-4">
-        @if (loading()) { <p class="m-0 text-[14px] text-slate-600">Loading…</p> }
+        @if (loading()) { <ws-skeleton [rows]="5" /> }
         @else if (error()) { <div class="ws-alert" role="alert">{{ error() }}</div> }
         @else if (tab() === 'career') {
           @if (steps().length) {

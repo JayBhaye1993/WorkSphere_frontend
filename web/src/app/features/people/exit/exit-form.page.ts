@@ -1,3 +1,4 @@
+import { SkeletonComponent } from '../../../shared/skeleton.component';
 import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom, catchError, of } from 'rxjs';
@@ -14,7 +15,7 @@ import { addDays, daysBetween, fmtDay, todayIst } from './exit-dates';
  */
 @Component({
   standalone: true,
-  imports: [RouterLink, LucideX, LucideInfo, LucideLock],
+  imports: [SkeletonComponent, RouterLink, LucideX, LucideInfo, LucideLock],
   template: `
     <div class="mx-auto max-w-[640px] min-h-full flex flex-col">
       <header class="sticky top-0 z-30 h-14 px-1 bg-white border-b border-slate-200 flex items-center gap-1">
@@ -27,7 +28,7 @@ import { addDays, daysBetween, fmtDay, todayIst } from './exit-dates';
         </div>
       </header>
 
-      @if (loading()) { <p class="p-4 text-[14px] text-slate-600">Loading…</p> }
+      @if (loading()) { <ws-skeleton class="block p-4" kind="form" [rows]="4" /> }
       @else if (loadError()) { <div class="m-4 ws-alert" role="alert">{{ loadError() }}</div> }
       @else {
         <form class="flex-1 p-4 flex flex-col gap-4" (submit)="$event.preventDefault(); submit()" novalidate>

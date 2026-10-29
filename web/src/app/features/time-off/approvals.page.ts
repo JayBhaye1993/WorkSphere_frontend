@@ -1,3 +1,4 @@
+import { SkeletonComponent } from '../../shared/skeleton.component';
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -8,13 +9,14 @@ import { days, range } from './time-off-format';
 import { errorText } from '../people/people-errors';
 import { AvatarComponent } from '../../shared/avatar.component';
 import { ToastService } from '../../core/services/toast.service';
+import { saveBlob } from '../../core/util/download';
 
 type Item = { kind: 'leave'; r: LeaveRequest } | { kind: 'comp'; c: CompOffClaim };
 
 /** Time off and comp-off claims waiting for the viewer, with select-and-approve for several at once. */
 @Component({
   standalone: true,
-  imports: [RouterLink, AvatarComponent, LucideArrowLeft, LucideX],
+  imports: [SkeletonComponent, RouterLink, AvatarComponent, LucideArrowLeft, LucideX],
   template: `
     <div class="mx-auto max-w-[720px] min-h-full pb-28">
       <header class="sticky top-0 z-10 h-14 px-1 bg-white border-b border-slate-200 flex items-center gap-1">
@@ -25,7 +27,7 @@ type Item = { kind: 'leave'; r: LeaveRequest } | { kind: 'comp'; c: CompOffClaim
         }
       </header>
       <div class="p-4 flex flex-col gap-5">
-        @if (loading()) { <p class="m-0 text-[14px] text-slate-600">Loading…</p> }
+        @if (loading()) { <ws-skeleton [rows]="5" /> }
         @else if (error()) { <div class="ws-alert" role="alert">{{ error() }}</div> }
         @else if (!total()) { <div class="p-6 rounded-14 bg-white border border-slate-200 text-center text-[14px] text-slate-600">Nothing is waiting for you.</div> }
         @else {
@@ -43,7 +45,8 @@ type Item = { kind: 'leave'; r: LeaveRequest } | { kind: 'comp'; c: CompOffClaim
                       <span class="text-[13px] text-slate-600">{{ r.leaveTypeName }} · {{ d(r.days) }}@if (r.sandwichDays) { (incl. {{ r.sandwichDays }} weekend/holiday) }@if (r.appliedByName) { · added by {{ r.appliedByName }}}</span>
                       @if (r.stage === 2) { <span class="text-[12px] font-semibold text-indigo-700">{{ r.firstApproverName }} approved · your decision is final</span> }
                       @if (r.reason) { <span class="text-[13px] text-slate-700">“{{ r.reason }}”</span> }
-                      @if (r.needsDocument) { <span class="text-[12px] text-amber-800">A supporting document is needed for this length.</span> }
+                      @if (r.attachmentName) { <button type="button" (click)="open(r)" class="self-start p-0 bg-transparent border-0 text-[13px] font-semibold text-indigo-700 cursor-pointer">📎 {{ r.attachmentName }}</button> }
+                      @else if (r.needsDocument) { <span class="text-[12px] text-amber-800">A supporting document is needed for this length; none added yet.</span> }
                     </div>
                   </div>
                   <div class="grid grid-cols-2 gap-2">
@@ -174,6 +177,10 @@ export class ApprovalsPage {
     this.items.update(x => x.filter(i => i.id !== id));
     this.claims.update(x => x.filter(i => i.id !== id));
     this.selected.update(s => { const n = new Set(s); n.delete(id); return n; });
+  }
+  async open(r: LeaveRequest) {
+    try { const x = await firstValueFrom(this.svc.attachment(r.id, r.attachmentName ?? 'document')); saveBlob(x.blob, x.name); }
+    catch (e) { this.toast.show(errorText(e, 'Could not open the document.'), 'error'); }
   }
   who(it: Item) { return it.kind === 'leave' ? it.r.employeeName : it.c.employeeName; }
   summary(it: Item) { return it.kind === 'leave' ? `${it.r.leaveTypeName}, ${range(it.r)}` : `Comp-off for ${it.c.workedLabel}`; }

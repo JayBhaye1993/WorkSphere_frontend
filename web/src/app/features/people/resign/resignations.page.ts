@@ -1,3 +1,4 @@
+import { SkeletonComponent } from '../../../shared/skeleton.component';
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -11,7 +12,7 @@ import { daysBetween, fmtDay } from '../exit/exit-dates';
 /** Resignations waiting for the viewer's decision (HR: everyone; managers: their reporting line). */
 @Component({
   standalone: true,
-  imports: [RouterLink, AvatarComponent, LucideArrowLeft, LucideChevronRight],
+  imports: [SkeletonComponent, RouterLink, AvatarComponent, LucideArrowLeft, LucideChevronRight],
   template: `
     <div class="mx-auto max-w-[720px] min-h-full">
       <header class="sticky top-0 z-10 h-14 px-1 bg-white border-b border-slate-200 flex items-center gap-1">
@@ -19,7 +20,7 @@ import { daysBetween, fmtDay } from '../exit/exit-dates';
         <h1 class="m-0 text-[18px] font-bold">Resignations</h1>
       </header>
       <div class="p-4 flex flex-col gap-2.5">
-        @if (loading()) { <p class="m-0 text-[14px] text-slate-600">Loading…</p> }
+        @if (loading()) { <ws-skeleton [rows]="5" /> }
         @else if (error()) { <div class="ws-alert" role="alert">{{ error() }}</div> }
         @else if (!items().length) { <div class="p-6 rounded-14 bg-white border border-slate-200 text-center text-[14px] text-slate-600">No resignations are waiting for you.</div> }
         @else {

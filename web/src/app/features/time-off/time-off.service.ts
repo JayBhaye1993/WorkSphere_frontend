@@ -1,9 +1,12 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { ApiResponse } from '../../core/models/api-response.model';
+import { fileNameFrom } from '../../core/util/download';
 import { ApiService } from '../../core/api/api.service';
 import { environment } from '../../../environments/environment';
 import {
-  CompOffClaim, EmployeeTimeOff, Holiday, HolidayInput, LeaveCalendar, LeaveInput, LeavePreview, LeaveRequest, LeaveSettings,
+  CompOffClaim, MyStats, EmployeeTimeOff, Holiday, HolidayInput, LeaveCalendar, LeaveInput, LeavePreview, LeaveRequest, LeaveSettings,
   LeaveType, LeaveTypeInput, LeaveTypeOption, MyTimeOff,
 } from './time-off.models';
 
@@ -11,6 +14,7 @@ import {
 @Injectable({ providedIn: 'root' })
 export class TimeOffService {
   private readonly api = inject(ApiService);
+  private readonly http = inject(HttpClient);
   private readonly base = `${environment.apiUrls.hr}/api/v1/leave`;
 
   me(year?: number): Observable<MyTimeOff> { return this.api.get(`${this.base}/me`, { year }); }
@@ -20,6 +24,17 @@ export class TimeOffService {
   cancel(id: string): Observable<LeaveRequest> { return this.api.post(`${this.base}/requests/${id}/cancel`, {}); }
   approve(id: string, note?: string | null): Observable<LeaveRequest> { return this.api.post(`${this.base}/requests/${id}/approve`, { note: note || null }); }
   reject(id: string, reason: string): Observable<LeaveRequest> { return this.api.post(`${this.base}/requests/${id}/reject`, { reason }); }
+  attach(id: string, file: File): Observable<LeaveRequest> {
+    const f = new FormData(); f.append('file', file, file.name);
+    return this.http.post<ApiResponse<LeaveRequest>>(`${this.base}/requests/${id}/attachment`, f).pipe(map(r => r.data as LeaveRequest));
+  }
+  removeAttachment(id: string): Observable<LeaveRequest> { return this.api.delete(`${this.base}/requests/${id}/attachment`); }
+  attachment(id: string, fallback: string): Observable<{ blob: Blob; name: string }> {
+    return this.http.get(`${this.base}/requests/${id}/attachment`, { responseType: 'blob', observe: 'response' })
+      .pipe(map(r => ({ blob: r.body!, name: fileNameFrom(r.headers.get('Content-Disposition'), fallback) })));
+  }
+  explain(id: string): Observable<{ id: string; name: string; color: string; description: string | null; lines: string[] }> { return this.api.get(`${this.base}/types/${id}/explain`); }
+  myStats(year?: number): Observable<MyStats> { return this.api.get(`${this.base}/stats/me`, { year }); }
   approvals(): Observable<LeaveRequest[]> { return this.api.get(`${this.base}/approvals`); }
   calendar(from: string, to: string, scope: 'team' | 'all'): Observable<LeaveCalendar> { return this.api.get(`${this.base}/calendar`, { from, to, scope }); }
   employee(id: string, year?: number): Observable<EmployeeTimeOff> { return this.api.get(`${this.base}/employees/${id}`, { year }); }

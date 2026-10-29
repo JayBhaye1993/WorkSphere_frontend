@@ -17,7 +17,9 @@ export interface LeaveRequest {
   needsDocument: boolean; appliedByName: string | null; decidedByName: string | null; decidedAt: string | null;
   decisionNote: string | null; cancelledByName: string | null; createdAt: string; canCancel: boolean; canDecide: boolean;
   stage: number; firstApproverName: string | null; waitingFor: 'manager' | 'HR' | null; sandwichDays: number;
+  attachmentName: string | null; canAttach: boolean;
 }
+export interface MyStats { year: number; yearLabel: string; totalDays: number; months: { month: string; days: number }[]; byType: { name: string; color: string; days: number }[]; byWeekday: { month: string; days: number }[]; }
 export interface Holiday { id: string; date: string; name: string; isOptional: boolean; locationIds: string[]; }
 export interface MyTimeOff {
   employeeId: string | null; name: string | null; year: number; yearLabel: string; yearStart: string; yearEnd: string;

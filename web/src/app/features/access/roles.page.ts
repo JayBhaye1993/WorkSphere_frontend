@@ -1,3 +1,4 @@
+import { SkeletonComponent } from '../../shared/skeleton.component';
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -9,7 +10,7 @@ import { errorText } from '../people/people-errors';
 /** Roles are named bundles of permissions. Every company starts with Admin, HR, Manager and Employee. */
 @Component({
   standalone: true,
-  imports: [RouterLink, LucideArrowLeft, LucideChevronRight, LucidePlus],
+  imports: [SkeletonComponent, RouterLink, LucideArrowLeft, LucideChevronRight, LucidePlus],
   template: `
     <div class="mx-auto max-w-[720px] min-h-full">
       <header class="sticky top-0 z-10 h-14 px-1 bg-white border-b border-slate-200 flex items-center gap-1">
@@ -21,7 +22,7 @@ import { errorText } from '../people/people-errors';
       </header>
       <div class="p-4 flex flex-col gap-2.5">
         <p class="m-0 mb-1 px-1 text-[13px] leading-relaxed text-slate-600">A role is a set of permissions. A person can hold several roles; they get everything those roles allow.@if (!canManage) { Only people who manage roles can change them. }</p>
-        @if (loading()) { <p class="text-[14px] text-slate-600">Loading…</p> }
+        @if (loading()) { <ws-skeleton [rows]="4" /> }
         @else if (error()) { <div class="ws-alert" role="alert">{{ error() }}</div> }
         @else {
           <ul class="list-none m-0 p-0 flex flex-col gap-2.5">
