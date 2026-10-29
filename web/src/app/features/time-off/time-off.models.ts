@@ -17,9 +17,11 @@ export interface LeaveRequest {
   needsDocument: boolean; appliedByName: string | null; decidedByName: string | null; decidedAt: string | null;
   decisionNote: string | null; cancelledByName: string | null; createdAt: string; canCancel: boolean; canDecide: boolean;
   stage: number; firstApproverName: string | null; waitingFor: 'manager' | 'HR' | null; sandwichDays: number;
-  attachmentName: string | null; canAttach: boolean;
+  attachmentName: string | null; canAttach: boolean; editNote?: string | null;
 }
 export interface MyStats { year: number; yearLabel: string; totalDays: number; months: { month: string; days: number }[]; byType: { name: string; color: string; days: number }[]; byWeekday: { month: string; days: number }[]; }
+export interface LedgerEntry { date: string; kind: 'Carried' | 'Credited' | 'Adjusted' | 'Taken' | 'Booked' | 'Pending' | 'Earned'; label: string; days: number; running: number; detail: string | null; }
+export interface TypeLedger { leaveTypeId: string; name: string; color: string; yearLabel: string; unlimited: boolean; entries: LedgerEntry[]; available: number | null; yearEnd: number | null; note: string | null; }
 export interface Holiday { id: string; date: string; name: string; isOptional: boolean; locationIds: string[]; }
 export interface MyTimeOff {
   employeeId: string | null; name: string | null; year: number; yearLabel: string; yearStart: string; yearEnd: string;
@@ -34,7 +36,7 @@ export interface LeaveTypeOption {
 export interface PreviewDay { date: string; kind: string; days: number; name: string | null; }
 export interface LeavePreview {
   days: number; breakdown: PreviewDay[]; unlimited: boolean; available: number | null; after: number | null;
-  needsDocument: boolean; error: string | null; notes: string[];
+  needsDocument: boolean; error: string | null; notes: string[]; yearEnd?: number | null;
 }
 export interface LeaveInput {
   employeeId?: string | null; leaveTypeId: string; from: string; to: string; fromHalf: Half; toHalf: Half; reason?: string | null;

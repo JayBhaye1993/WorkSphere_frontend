@@ -4,7 +4,8 @@ import { firstValueFrom } from 'rxjs';
 import { LucideArrowLeft, LucideChevronLeft, LucideChevronRight } from '@lucide/angular';
 import { TimeOffService } from './time-off.service';
 import { Holiday } from './time-off.models';
-import { fmt, monthName, parseDay, todayIso, weekday } from './time-off-format';
+import { fmt, icsFile, monthName, parseDay, todayIso, weekday } from './time-off-format';
+import { saveBlob } from '../../core/util/download';
 import { errorText } from '../people/people-errors';
 import { AuthService } from '../../core/auth/auth.service';
 
@@ -17,6 +18,7 @@ import { AuthService } from '../../core/auth/auth.service';
       <header class="sticky top-0 z-10 h-14 px-1 bg-white border-b border-slate-200 flex items-center gap-1">
         <a routerLink="/time-off" aria-label="Back to time off" class="w-11 h-11 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-900"><svg lucideArrowLeft [size]="22" aria-hidden="true"></svg></a>
         <h1 class="m-0 flex-1 text-[18px] font-bold">Holidays</h1>
+        @if (items().length) { <button type="button" (click)="toCalendar()" class="mr-1 h-10 px-3 rounded-full bg-transparent border-0 text-[14px] font-semibold text-indigo-700 hover:bg-indigo-50 cursor-pointer">Add to calendar</button> }
         @if (manage) { <a routerLink="/more/settings/holidays" class="mr-3 text-[14px] font-semibold">Manage</a> }
       </header>
       <div class="p-4 flex flex-col gap-4">
@@ -77,4 +79,8 @@ export class HolidaysPage {
   setYear(y: number) { this.year.set(y); void this.load(); }
   dayNo(d: string) { return fmt(d).split(' ')[0]; }
   wd(d: string) { return weekday(d); }
+  /** Every holiday of the year (optional ones marked) as one calendar file. */
+  toCalendar() {
+    saveBlob(icsFile(this.items().map(h => ({ title: h.isOptional ? `${h.name} (optional holiday)` : `${h.name} (holiday)`, from: h.date, to: h.date }))), `holidays-${this.year()}.ics`);
+  }
 }

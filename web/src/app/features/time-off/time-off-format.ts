@@ -48,4 +48,17 @@ export const STATUS_STYLE: Record<string, string> = {
   Rejected: 'bg-rose-50 text-rose-800 border-rose-200',
   Cancelled: 'bg-slate-100 text-slate-600 border-slate-200',
 };
+/** An .ics file (works with Google, Outlook and Apple calendars) for whole-day events. */
+export function icsFile(events: { title: string; from: string; to: string; note?: string }[]): Blob {
+  const stamp = new Date().toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z';
+  const d = (iso: string) => iso.slice(0, 10).replace(/-/g, '');
+  const esc = (s: string) => s.replace(/[\\;,]/g, m => '\\' + m).replace(/\n/g, '\\n');
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//WorkSphere//Time off//EN', 'CALSCALE:GREGORIAN'];
+  events.forEach((e, i) => lines.push('BEGIN:VEVENT', `UID:${d(e.from)}-${i}-${Math.random().toString(36).slice(2)}@worksphere`, `DTSTAMP:${stamp}`,
+    `DTSTART;VALUE=DATE:${d(e.from)}`, `DTEND;VALUE=DATE:${d(addDays(e.to, 1))}`, `SUMMARY:${esc(e.title)}`,
+    ...(e.note ? [`DESCRIPTION:${esc(e.note)}`] : []), 'TRANSP:OPAQUE', 'END:VEVENT'));
+  lines.push('END:VCALENDAR');
+  return new Blob([lines.join('\r\n')], { type: 'text/calendar' });
+}
+
 export function statusText(r: LeaveRequest): string { return r.status === 'Rejected' ? 'Declined' : r.status; }

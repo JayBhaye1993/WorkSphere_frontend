@@ -4,7 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { LucideArrowLeft, LucideChevronDown } from '@lucide/angular';
 import { TimeOffService } from './time-off.service';
 import { Half, Holiday, LeaveBalance, LeavePreview, LeaveTypeOption } from './time-off.models';
-import { addDays, days, fmt, num, parseDay, todayIso, weekday } from './time-off-format';
+import { addDays, days, fmt, num, parseDay, range, todayIso, weekday } from './time-off-format';
 import { errorText } from '../people/people-errors';
 import { ToastService } from '../../core/services/toast.service';
 
@@ -103,7 +103,8 @@ type DayPart = 'Full' | 'First' | 'Second';
                 <span class="flex flex-col"><span class="text-[30px] font-bold leading-none">{{ n(p.days) }}</span><span class="text-[13px] text-slate-600">{{ p.days === 1 ? 'working day' : 'working days' }}</span></span>
                 <span class="flex-1"></span>
                 @if (!p.unlimited && p.available !== null) {
-                  <span class="text-right text-[13px] text-slate-700">{{ n(p.available) }} left<br /><b [class.text-rose-700]="(p.after ?? 0) < 0">{{ n(p.after) }} after this</b></span>
+                  <span class="text-right text-[13px] text-slate-700">{{ n(p.available) }} left<br /><b [class.text-rose-700]="(p.after ?? 0) < 0">{{ n(p.after) }} after this</b>
+                    @if (p.yearEnd !== null && p.yearEnd !== undefined && p.yearEnd !== p.after) { <br /><span class="text-slate-500">about {{ n(p.yearEnd) }} by year end</span> }</span>
                 } @else if (p.unlimited) { <span class="text-[13px] text-slate-600">No limit</span> }
               </div>
               @if (p.error) { <p class="m-0 text-[14px] font-medium text-rose-800" role="alert">{{ p.error }}</p> }
@@ -124,6 +125,15 @@ type DayPart = 'Full' | 'First' | 'Second';
               }
             </section>
           } @else if (previewing()) { <p class="m-0 text-[13px] text-slate-600">Counting days…</p> }
+
+          @if (peers().length) {
+            <section class="p-3.5 rounded-14 bg-amber-50 border border-amber-200 flex flex-col gap-1.5" aria-label="Also off on these days">
+              <h2 class="m-0 text-[13px] font-semibold text-amber-900">Also off from your team</h2>
+              @for (x of peers(); track $index) {
+                <p class="m-0 text-[13px] text-amber-950"><b>{{ x.name }}</b> · {{ x.when }}@if (x.pending) { <span class="text-amber-700"> (pending)</span> }</p>
+              }
+            </section>
+          }
 
           @if (submitError()) { <div class="ws-alert" role="alert">{{ submitError() }}</div> }
 
@@ -156,6 +166,9 @@ export class ApplyPage {
   readonly showDays = signal(false);
   readonly saving = signal(false); readonly submitError = signal<string | null>(null);
   readonly file = signal<File | null>(null);
+  /** Teammates already off on the chosen dates (Keka shows this too), so people can plan around each other. */
+  readonly peers = signal<{ name: string; when: string; pending: boolean }[]>([]);
+  private peerSeq = 0;
   pickFile(e: Event) {
     const f = (e.target as HTMLInputElement).files?.[0] ?? null;
     if (f && f.size > 10 * 1024 * 1024) { this.submitError.set('Files can be up to 10 MB.'); return; }
@@ -181,7 +194,7 @@ export class ApplyPage {
     effect(() => {
       const t = this.typeId(), f = this.from(), to = this.to(), h = this.halves();
       if (!t || !f || !to) return;
-      untracked(() => this.schedule(t, f, to, h));
+      untracked(() => { this.schedule(t, f, to, h); void this.loadPeers(f, to); });
     });
   }
 
@@ -211,6 +224,18 @@ export class ApplyPage {
     let d = addDays(todayIso(), 1);
     for (let i = 0; i < 7 && [0, 6].includes(parseDay(d).getUTCDay()); i++) d = addDays(d, 1);
     return d;
+  }
+
+  private async loadPeers(from: string, to: string) {
+    if (this.forId) { this.peers.set([]); return; }
+    const mine = ++this.peerSeq;
+    try {
+      const c = await firstValueFrom(this.svc.calendar(from, to, 'team'));
+      if (mine !== this.peerSeq) return;
+      const people = new Map(c.people.map(p => [p.employeeId, p]));
+      this.peers.set(c.entries.filter(e => !people.get(e.employeeId)?.isMe)
+        .map(e => ({ name: people.get(e.employeeId)?.name ?? '', when: range(e), pending: e.status === 'Pending' })));
+    } catch { if (mine === this.peerSeq) this.peers.set([]); }
   }
 
   private schedule(typeId: string, from: string, to: string, h: { fromHalf: Half; toHalf: Half }) {

@@ -3,8 +3,8 @@ import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { LucideCalendarDays, LucideChevronRight, LucidePlus, LucideX, LucideInbox, LucidePalmtree, LucideUsers } from '@lucide/angular';
 import { TimeOffService } from './time-off.service';
-import { LeaveCalendar, LeaveRequest, MyStats, MyTimeOff } from './time-off.models';
-import { STATUS_STYLE, addDays, days, fmt, num, parseDay, range, statusText, todayIso, weekday } from './time-off-format';
+import { LeaveCalendar, LeaveRequest, MyStats, MyTimeOff, TypeLedger, Half } from './time-off.models';
+import { STATUS_STYLE, addDays, days, fmt, icsFile, num, parseDay, range, statusText, todayIso, weekday } from './time-off-format';
 import { errorText } from '../people/people-errors';
 import { AvatarComponent } from '../../shared/avatar.component';
 import { ToastService } from '../../core/services/toast.service';
@@ -83,6 +83,7 @@ import { BalanceCardComponent } from './balance-card.component';
                       <span class="flex-1 min-w-0 flex flex-col gap-0.5">
                         <span class="text-[15px] font-semibold">{{ rng(r) }}</span>
                         <span class="text-[13px] text-slate-600">{{ r.leaveTypeName }} · {{ days_(r.days) }}@if (r.sandwichDays) { (incl. {{ n(r.sandwichDays) }} weekend/holiday) }@if (r.appliedByName) { · added by {{ r.appliedByName }}}</span>
+                        @if (r.editNote) { <span class="text-[12px] text-slate-500">{{ r.editNote }}</span> }
                         @if (r.waitingFor) { <span class="text-[12px] text-slate-500">Waiting for {{ r.waitingFor === 'HR' ? 'HR' : 'your manager' }}@if (r.firstApproverName) { · {{ r.firstApproverName }} approved }</span> }
                         @if (r.status === 'Rejected' && r.decisionNote) { <span class="text-[13px] text-rose-800">“{{ r.decisionNote }}” – {{ r.decidedByName }}</span> }
                         @else if (r.status === 'Approved' && r.decidedByName) { <span class="text-[12px] text-slate-500">Approved by {{ r.decidedByName }}</span> }
@@ -97,6 +98,8 @@ import { BalanceCardComponent } from './balance-card.component';
                       <span class="flex flex-col items-end gap-1.5 shrink-0">
                         <span class="px-2 py-0.5 rounded-full border text-[12px] font-semibold" [class]="pill(r)">{{ status(r) }}</span>
                         @if (r.canCancel) { <button type="button" (click)="askCancel(r)" class="h-9 px-2 -mr-2 rounded-lg bg-transparent border-0 text-[13px] font-semibold text-slate-700 hover:bg-slate-100 cursor-pointer">Cancel</button> }
+                        @if (r.canCancel && r.days > 0.5) { <button type="button" (click)="askShorten(r)" class="h-9 px-2 -mr-2 rounded-lg bg-transparent border-0 text-[13px] font-semibold text-slate-700 hover:bg-slate-100 cursor-pointer">Change dates</button> }
+                        @if (r.status === 'Approved' && r.to >= today) { <button type="button" (click)="toCalendar(r)" class="h-9 px-2 -mr-2 rounded-lg bg-transparent border-0 text-[13px] font-semibold text-indigo-700 hover:bg-indigo-50 cursor-pointer">Add to calendar</button> }
                       </span>
                     </li>
                   } @empty { <li class="px-4 py-4 text-[14px] text-slate-600">Nothing here.</li> }
@@ -186,6 +189,45 @@ import { BalanceCardComponent } from './balance-card.component';
             <ul class="m-0 pl-5 flex flex-col gap-2 text-[14px] text-slate-800 leading-relaxed">
               @for (l of x.lines; track $index) { <li>{{ l }}</li> }
             </ul>
+            @if (ledger(); as lg) {
+              <section class="flex flex-col gap-2" aria-labelledby="ledger-h">
+                <div class="flex items-baseline gap-2">
+                  <h3 id="ledger-h" class="m-0 flex-1 text-[13px] font-semibold text-slate-600 uppercase tracking-[.06em]">Your {{ lg.yearLabel }} so far</h3>
+                  @if (lg.yearEnd !== null) { <span class="text-[12px] text-slate-600">about {{ n(lg.yearEnd) }} by year end</span> }
+                </div>
+                <ul class="list-none m-0 p-0 rounded-12 border border-slate-200 overflow-hidden">
+                  @for (e of lg.entries; track $index) {
+                    <li class="flex items-start gap-3 px-3 py-2.5 border-b border-slate-100 last:border-b-0 text-[13px]">
+                      <span class="w-14 shrink-0 text-slate-500">{{ f(e.date) }}</span>
+                      <span class="flex-1 min-w-0 flex flex-col"><span class="text-slate-900">{{ e.label }}</span>@if (e.detail) { <span class="text-[12px] text-slate-500">{{ e.detail }}</span> }
+                        @if (e.kind === 'Pending') { <span class="text-[12px] text-amber-700">pending</span> }</span>
+                      <span class="mono w-12 text-right font-semibold" [class]="e.days >= 0 ? 'text-emerald-700' : 'text-slate-800'">{{ e.days > 0 ? '+' : '' }}{{ n(e.days) }}</span>
+                      @if (!lg.unlimited) { <span class="mono w-10 text-right text-slate-500">{{ n(e.running) }}</span> }
+                    </li>
+                  } @empty { <li class="px-3 py-3 text-[13px] text-slate-600">Nothing yet this year.</li> }
+                </ul>
+              </section>
+            }
+          </section>
+        </div>
+      }
+
+      @if (shortening(); as r) {
+        <div class="fixed inset-0 z-40 bg-slate-900/45 flex items-end lg:items-center justify-center" (click)="shortening.set(null)">
+          <section role="dialog" aria-modal="true" aria-label="Change dates" (click)="$event.stopPropagation()"
+                   class="w-full lg:max-w-[440px] bg-white rounded-t-[20px] lg:rounded-[20px] px-5 pt-3 pb-[calc(20px+env(safe-area-inset-bottom))] flex flex-col gap-4">
+            <span aria-hidden="true" class="lg:hidden self-center w-10 h-1 rounded-full bg-slate-300"></span>
+            <div class="flex items-center gap-2">
+              <h2 class="m-0 flex-1 text-[19px] font-bold">Cancel some days</h2>
+              <button type="button" (click)="shortening.set(null)" aria-label="Close" class="w-10 h-10 flex items-center justify-center rounded-full bg-transparent border-0 hover:bg-slate-100 cursor-pointer"><svg lucideX [size]="20" aria-hidden="true"></svg></button>
+            </div>
+            <p class="m-0 text-[14px] text-slate-700">{{ r.leaveTypeName }}, {{ rng(r) }}. Keep the days you still want off; the rest go back to your balance. {{ r.status === 'Approved' ? 'It stays approved.' : '' }}</p>
+            @if (sError()) { <div class="ws-alert" role="alert">{{ sError() }}</div> }
+            <div class="grid grid-cols-2 gap-3">
+              <label class="ws-field">From <input class="ws-input" type="date" [min]="r.from" [max]="sTo()" [value]="sFrom()" (change)="sFrom.set($any($event.target).value)" /></label>
+              <label class="ws-field">To <input class="ws-input" type="date" [min]="sFrom()" [max]="r.to" [value]="sTo()" (change)="sTo.set($any($event.target).value)" /></label>
+            </div>
+            <button type="button" (click)="doShorten(r)" [disabled]="working() || (sFrom() === r.from && sTo() === r.to)" class="ws-btn ws-btn-primary">{{ working() ? 'Saving…' : 'Keep these days' }}</button>
           </section>
         </div>
       }
@@ -222,7 +264,11 @@ export class TimeOffPage {
   readonly filters = [{ v: 'all' as const, label: 'All' }, { v: 'upcoming' as const, label: 'Coming up' }, { v: 'pending' as const, label: 'Pending' },
     { v: 'past' as const, label: 'Taken' }, { v: 'closed' as const, label: 'Declined or cancelled' }];
   readonly explained = signal<{ name: string; color: string; description: string | null; lines: string[] } | null>(null);
+  readonly ledger = signal<TypeLedger | null>(null);
+  readonly today = todayIso();
   async explain(id: string) {
+    this.ledger.set(null);
+    firstValueFrom(this.svc.ledger(id)).then(x => this.ledger.set(x)).catch(() => {});
     try { this.explained.set(await firstValueFrom(this.svc.explain(id))); }
     catch (e) { this.toast.show(errorText(e, 'Could not load the rules.'), 'error'); }
   }
@@ -279,6 +325,24 @@ export class TimeOffPage {
   }
 
   askCancel(r: LeaveRequest) { this.cancelling.set(r); }
+
+  /** Keep part of a request: new dates inside the old ones (days already taken stay). */
+  readonly shortening = signal<LeaveRequest | null>(null);
+  readonly sFrom = signal(''); readonly sTo = signal(''); readonly sError = signal<string | null>(null);
+  askShorten(r: LeaveRequest) { this.shortening.set(r); this.sFrom.set(r.from); this.sTo.set(r.to); this.sError.set(null); }
+  async doShorten(r: LeaveRequest) {
+    this.working.set(true); this.sError.set(null);
+    const from = this.sFrom(), to = this.sTo();
+    const fromHalf: Half = from === r.from ? r.fromHalf : null;
+    const toHalf: Half = to === r.to && from !== to ? r.toHalf : null;
+    try { const x = await firstValueFrom(this.svc.shorten(r.id, { from, to, fromHalf, toHalf })); this.shortening.set(null); this.toast.show(`Now ${days(x.days)}`); await this.load(); }
+    catch (e) { this.sError.set(errorText(e, 'Could not change the dates.')); }
+    finally { this.working.set(false); }
+  }
+
+  toCalendar(r: LeaveRequest) {
+    saveBlob(icsFile([{ title: `${r.leaveTypeName} (out of office)`, from: r.from, to: r.to, note: range(r) }]), `time-off-${r.from}.ics`);
+  }
   async doCancel(r: LeaveRequest) {
     this.working.set(true);
     try { await firstValueFrom(this.svc.cancel(r.id)); this.cancelling.set(null); this.toast.show('Request cancelled'); await this.load(); }
@@ -294,4 +358,5 @@ export class TimeOffPage {
   mon(d: string) { return fmt(d).split(' ')[1]; }
   dayNo(d: string) { return fmt(d).split(' ')[0]; }
   wd(d: string) { return weekday(d); }
+  f(d: string) { return fmt(d); }
 }

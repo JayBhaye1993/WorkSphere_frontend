@@ -49,7 +49,7 @@ interface Overview {
           <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <div class="p-3.5 rounded-14 bg-white border border-slate-200"><span class="block text-[12px] text-slate-600">Off today</span><span class="text-[26px] font-bold">{{ d.offToday.length }}</span><span class="text-[13px] text-slate-500"> of {{ d.people }}</span></div>
             <div class="p-3.5 rounded-14 bg-white border border-slate-200"><span class="block text-[12px] text-slate-600">Waiting for approval</span><span class="text-[26px] font-bold" [class.text-amber-700]="d.pendingRequests > 0">{{ d.pendingRequests }}</span></div>
-            <div class="p-3.5 rounded-14 bg-white border border-slate-200"><span class="block text-[12px] text-slate-600">Days taken this year</span><span class="text-[26px] font-bold">{{ n(d.daysTaken) }}</span><span class="text-[13px] text-slate-500"> · {{ n(avg()) }} each</span></div>
+            <div class="p-3.5 rounded-14 bg-white border border-slate-200"><span class="block text-[12px] text-slate-600">Days taken this year</span><span class="text-[26px] font-bold">{{ n(d.daysTaken) }}</span><span class="block text-[12px] text-slate-500">avg {{ avg() < 0.1 && avg() > 0 ? 'under 0.1' : n(avg()) }} a person</span></div>
             <div class="p-3.5 rounded-14 bg-white border border-slate-200"><span class="block text-[12px] text-slate-600">Unplanned (no notice)</span><span class="text-[26px] font-bold">{{ d.unplannedRequests }}</span></div>
           </div>
 

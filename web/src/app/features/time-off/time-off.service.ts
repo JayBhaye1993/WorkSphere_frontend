@@ -7,7 +7,7 @@ import { ApiService } from '../../core/api/api.service';
 import { environment } from '../../../environments/environment';
 import {
   CompOffClaim, MyStats, EmployeeTimeOff, Holiday, HolidayInput, LeaveCalendar, LeaveInput, LeavePreview, LeaveRequest, LeaveSettings,
-  LeaveType, LeaveTypeInput, LeaveTypeOption, MyTimeOff,
+  LeaveType, LeaveTypeInput, LeaveTypeOption, MyTimeOff, TypeLedger, Half,
 } from './time-off.models';
 
 /** Time off (HR service). Permission checks happen on the server; the UI only hides what can't be used. */
@@ -21,6 +21,8 @@ export class TimeOffService {
   options(employeeId?: string | null): Observable<LeaveTypeOption[]> { return this.api.get(`${this.base}/options`, { employeeId }); }
   preview(i: LeaveInput): Observable<LeavePreview> { return this.api.post(`${this.base}/preview`, i); }
   apply(i: LeaveInput): Observable<LeaveRequest> { return this.api.post(`${this.base}/requests`, i); }
+  shorten(id: string, body: { from: string; to: string; fromHalf: Half; toHalf: Half }): Observable<LeaveRequest> { return this.api.post(`${this.base}/requests/${id}/shorten`, body); }
+  ledger(typeId: string, employeeId?: string | null, year?: number): Observable<TypeLedger> { return this.api.get(`${this.base}/types/${typeId}/ledger`, { employeeId, year }); }
   cancel(id: string): Observable<LeaveRequest> { return this.api.post(`${this.base}/requests/${id}/cancel`, {}); }
   approve(id: string, note?: string | null): Observable<LeaveRequest> { return this.api.post(`${this.base}/requests/${id}/approve`, { note: note || null }); }
   reject(id: string, reason: string): Observable<LeaveRequest> { return this.api.post(`${this.base}/requests/${id}/reject`, { reason }); }
