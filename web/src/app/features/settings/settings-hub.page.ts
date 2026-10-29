@@ -5,6 +5,7 @@ import { LucideArrowLeft, LucideChevronRight } from '@lucide/angular';
 import { SettingsService } from './settings.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { AccessService } from '../access/access.service';
+import { TimeOffService } from '../time-off/time-off.service';
 
 interface Row { name: string; hint: string; link: string; count: string; }
 
@@ -43,6 +44,7 @@ export class SettingsHubPage {
   private readonly svc = inject(SettingsService);
   private readonly access = inject(AccessService);
   private readonly auth = inject(AuthService);
+  private readonly timeOff = inject(TimeOffService);
   readonly groups = signal<{ title: string; rows: Row[] }[]>(this.build({}));
 
   constructor() { void this.counts(); }
@@ -71,24 +73,39 @@ export class SettingsHubPage {
         r('Exit reasons', 'Why people leave', 'exit-reasons', 'exit-reasons'),
         r('Offboarding checklist', 'Steps for every exit', 'offboarding-items', 'offboarding-items'),
       ] }]),
+      ...(!this.auth.can('leave.manage') ? [] : [{ title: 'Time off', rows: [
+        r('Time off types', 'Allowances, carry forward, who gets each', 'leave-types', 'leave-types'),
+        r('Holidays', 'Public holidays for each location', 'holidays', 'holidays'),
+        r('Work week and leave year', 'Weekend days and when the year starts', 'time-off', 'time-off'),
+      ] }]),
       { title: 'Access', rows: access },
     ];
   }
 
+  private leave: Record<string, string> = {};
+
   private async counts() {
+    if (this.auth.can('leave.manage')) {
+      const [lt, hol, ls] = await Promise.all([
+        firstValueFrom(this.timeOff.types().pipe(catchError(() => of(null)))),
+        firstValueFrom(this.timeOff.holidays(new Date().getFullYear()).pipe(catchError(() => of(null)))),
+        firstValueFrom(this.timeOff.settings().pipe(catchError(() => of(null)))),
+      ]);
+      this.leave = { 'leave-types': lt ? String(lt.length) : '', holidays: hol ? String(hol.length) : '', 'time-off': ls?.yearLabel ?? '' };
+    }
     const n = (p: string, params?: Record<string, unknown>) => firstValueFrom(this.svc.list<unknown>(p, params).pipe(catchError(() => of(null))));
     const [users, roles] = await Promise.all([
       this.auth.can('users.manage') ? firstValueFrom(this.access.users({ status: 'Active', pageSize: 1 }).pipe(catchError(() => of(null)))) : Promise.resolve(null),
       firstValueFrom(this.access.roles().pipe(catchError(() => of(null)))),
     ]);
-    if (!this.auth.can('org.manage')) { this.groups.set(this.build({ users: users ? String(users.totalCount) : '', roles: roles ? String(roles.length) : '' })); return; }
+    if (!this.auth.can('org.manage')) { this.groups.set(this.build({ ...this.leave, users: users ? String(users.totalCount) : '', roles: roles ? String(roles.length) : '' })); return; }
     const [d, ds, l, g, t, cf, code, xr, xi, dc] = await Promise.all([
       n('departments'), n('designations'), n('locations'), n('grades'), n('employment-types'), n('custom-fields', { includeInactive: true }),
       firstValueFrom(this.svc.get<{ nextCodePreview: string }>('employee-settings').pipe(catchError(() => of(null)))),
       n('exit-reasons'), n('offboarding-items'), n('document-categories'),
     ]);
     const c = (x: unknown[] | null) => x ? String(x.length) : '';
-    this.groups.set(this.build({ departments: c(d), designations: c(ds), locations: c(l), grades: c(g), 'employment-types': c(t), 'custom-fields': c(cf), 'employee-code': code?.nextCodePreview ?? '', 'exit-reasons': c(xr), 'offboarding-items': c(xi), 'document-categories': c(dc),
+    this.groups.set(this.build({ ...this.leave, departments: c(d), designations: c(ds), locations: c(l), grades: c(g), 'employment-types': c(t), 'custom-fields': c(cf), 'employee-code': code?.nextCodePreview ?? '', 'exit-reasons': c(xr), 'offboarding-items': c(xi), 'document-categories': c(dc),
       users: users ? String(users.totalCount) : '', roles: roles ? String(roles.length) : '' }));
   }
 }

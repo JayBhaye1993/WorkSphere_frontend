@@ -11,6 +11,7 @@ import { errorText } from '../people-errors';
 import { CareerTimelineComponent } from '../career-timeline.component';
 import { ExitCardComponent } from '../exit/exit-card.component';
 import { DocumentsComponent } from '../files/documents.component';
+import { PersonTimeOffComponent } from '../../time-off/person-time-off.component';
 import { PhotoSheetComponent } from '../files/photo-sheet.component';
 import { fmtDay } from '../exit/exit-dates';
 
@@ -19,7 +20,7 @@ interface Row { label: string; value?: string; chips?: string[]; mono?: boolean;
 @Component({
   selector: 'ws-person',
   standalone: true,
-  imports: [RouterLink, AvatarComponent, CareerTimelineComponent, ExitCardComponent, DocumentsComponent, PhotoSheetComponent, LucideArrowLeft, LucidePhone, LucideMail, LucideLock],
+  imports: [RouterLink, AvatarComponent, CareerTimelineComponent, ExitCardComponent, DocumentsComponent, PersonTimeOffComponent, PhotoSheetComponent, LucideArrowLeft, LucidePhone, LucideMail, LucideLock],
   template: `
     <div class="mx-auto max-w-[760px] pb-10">
       <header class="sticky top-0 z-10 h-14 px-1 bg-white flex items-center">
@@ -132,6 +133,7 @@ interface Row { label: string; value?: string; chips?: string[]; mono?: boolean;
           }
 
           @if (full()) { <ws-documents [employeeId]="id()" [self]="isSelf()" /> }
+          @if (card()?.status !== 'Exited') { <ws-person-time-off [employeeId]="id()" /> }
 
           @if (canStartExit()) {
             <a [routerLink]="['/people', id(), 'exit']" class="self-center mt-2 min-h-[44px] px-4 flex items-center text-[14px] font-semibold text-red-700 no-underline rounded-10 hover:bg-red-50">Start exit</a>
