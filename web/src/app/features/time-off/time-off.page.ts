@@ -63,7 +63,8 @@ import { BalanceCardComponent } from './balance-card.component';
                       <span class="mt-1.5 w-2.5 h-2.5 rounded-full shrink-0" [style.background]="r.color" aria-hidden="true"></span>
                       <span class="flex-1 min-w-0 flex flex-col gap-0.5">
                         <span class="text-[15px] font-semibold">{{ rng(r) }}</span>
-                        <span class="text-[13px] text-slate-600">{{ r.leaveTypeName }} · {{ days_(r.days) }}@if (r.appliedByName) { · added by {{ r.appliedByName }}}</span>
+                        <span class="text-[13px] text-slate-600">{{ r.leaveTypeName }} · {{ days_(r.days) }}@if (r.sandwichDays) { (incl. {{ n(r.sandwichDays) }} weekend/holiday) }@if (r.appliedByName) { · added by {{ r.appliedByName }}}</span>
+                        @if (r.waitingFor) { <span class="text-[12px] text-slate-500">Waiting for {{ r.waitingFor === 'HR' ? 'HR' : 'your manager' }}@if (r.firstApproverName) { · {{ r.firstApproverName }} approved }</span> }
                         @if (r.status === 'Rejected' && r.decisionNote) { <span class="text-[13px] text-rose-800">“{{ r.decisionNote }}” – {{ r.decidedByName }}</span> }
                         @else if (r.status === 'Approved' && r.decidedByName) { <span class="text-[12px] text-slate-500">Approved by {{ r.decidedByName }}</span> }
                         @if (r.needsDocument && r.status !== 'Cancelled' && r.status !== 'Rejected') { <span class="text-[12px] text-amber-800">Needs a supporting document. Upload it to your Documents.</span> }

@@ -68,7 +68,9 @@ type DayPart = 'Full' | 'First' | 'Second';
             }
           }
 
-          <label class="ws-field">Reason <span class="hint">Optional. Your approver sees it.</span>
+          @if (type()?.noticeDays) { <p class="m-0 -mt-2 text-[12px] text-slate-600">{{ type()!.name }} needs {{ type()!.noticeDays }} {{ type()!.noticeDays === 1 ? 'day' : 'days' }}’ notice.</p> }
+
+          <label class="ws-field">Reason <span class="hint">{{ type()?.reasonRequired ? 'Required for ' + type()!.name + '.' : 'Optional. Your approver sees it.' }}</span>
             <textarea class="ws-input" rows="3" maxlength="1000" [value]="reason()" (input)="reason.set($any($event.target).value)" placeholder="e.g. Family function in Nashik"></textarea>
           </label>
 

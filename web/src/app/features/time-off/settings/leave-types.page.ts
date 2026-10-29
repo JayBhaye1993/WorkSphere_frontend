@@ -61,6 +61,17 @@ export class LeaveTypesPage {
     if (!t.isPaid) p.push('unpaid');
     if (t.carryForwardMax > 0) p.push(`carry up to ${num(t.carryForwardMax)}`);
     if (t.employmentTypeIds.length) p.push('some employment types');
+    const r = t.rules;
+    if (r) {
+      if (r.sandwichWeekends || r.sandwichHolidays) p.push('sandwich rule');
+      if (r.noticeDays) p.push(`${r.noticeDays} days' notice`);
+      if (r.maxDaysPerRequest) p.push(`max ${num(r.maxDaysPerRequest)} at a time`);
+      if (r.backdateDays !== null) p.push(r.backdateDays === 0 ? 'no past dates' : `up to ${r.backdateDays} days after`);
+      if (r.reasonRequired) p.push('reason needed');
+      if (r.tenure?.length) p.push('more with service');
+      if (r.approvalFlow === 'ManagerThenHr') p.push('manager then HR');
+      if (r.approvalFlow === 'Auto') p.push('auto-approved');
+    }
     return p.join(' · ');
   }
   async move(i: number, d: number) {

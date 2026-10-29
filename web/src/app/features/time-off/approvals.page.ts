@@ -31,7 +31,8 @@ import { ToastService } from '../../core/services/toast.service';
                 <div class="flex-1 min-w-0 flex flex-col gap-0.5">
                   <a [routerLink]="['/people', r.employeeId]" class="text-[15px] font-semibold text-slate-900 no-underline">{{ r.employeeName }}</a>
                   <span class="text-[14px] text-slate-800">{{ rng(r) }}</span>
-                  <span class="text-[13px] text-slate-600">{{ r.leaveTypeName }} · {{ d(r.days) }}@if (r.appliedByName) { · added by {{ r.appliedByName }}}</span>
+                  <span class="text-[13px] text-slate-600">{{ r.leaveTypeName }} · {{ d(r.days) }}@if (r.sandwichDays) { (incl. {{ r.sandwichDays }} weekend/holiday) }@if (r.appliedByName) { · added by {{ r.appliedByName }}}</span>
+                  @if (r.stage === 2) { <span class="text-[12px] font-semibold text-indigo-700">{{ r.firstApproverName }} approved · your decision is final</span> }
                   @if (r.reason) { <span class="text-[13px] text-slate-700">“{{ r.reason }}”</span> }
                   @if (r.needsDocument) { <span class="text-[12px] text-amber-800">A supporting document is needed for this length.</span> }
                 </div>
