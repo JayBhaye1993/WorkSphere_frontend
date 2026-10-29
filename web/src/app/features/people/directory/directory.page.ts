@@ -1,3 +1,4 @@
+import { BellComponent } from '../../notifications/bell.component';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
@@ -18,7 +19,7 @@ const PAGE = 30;
 @Component({
   selector: 'ws-people-directory',
   standalone: true,
-  imports: [RouterLink, AvatarComponent, LucideSearch, LucideChevronRight, LucideX, LucideUserPlus, LucideDownload, LucideUpload, LucideNetwork],
+  imports: [BellComponent, RouterLink, AvatarComponent, LucideSearch, LucideChevronRight, LucideX, LucideUserPlus, LucideDownload, LucideUpload, LucideNetwork],
   template: `
     <div class="mx-auto max-w-[760px]">
       <header class="sticky top-0 z-10 bg-white border-b border-slate-200 px-4 pt-5 pb-3 flex flex-col gap-3">
@@ -28,6 +29,7 @@ const PAGE = 30;
           </h1>
           <span class="flex-1"></span>
           <a routerLink="/people/org" aria-label="Org chart" title="Org chart" class="icon-btn"><svg lucideNetwork [size]="19" aria-hidden="true"></svg></a>
+          <ws-bell class="lg:hidden" />
           @if (canExport) {
             <button type="button" (click)="export()" [disabled]="exporting()" aria-label="Export to Excel" title="Export to Excel"
                     class="icon-btn"><svg lucideDownload [size]="19" aria-hidden="true"></svg></button>

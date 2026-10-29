@@ -36,6 +36,8 @@ export const routes: Routes = [
       { path: 'time-off/comp-off', loadComponent: () => import('./features/time-off/comp-off.page').then(m => m.CompOffPage) },
       { path: 'time-off/team', loadComponent: () => import('./features/time-off/team.page').then(m => m.TeamLeavePage) },
       { path: 'time-off/holidays', loadComponent: () => import('./features/time-off/holidays.page').then(m => m.HolidaysPage) },
+      { path: 'notifications', loadComponent: () => import('./features/notifications/inbox.page').then(m => m.InboxPage) },
+      { path: 'more/notifications', loadComponent: () => import('./features/notifications/notification-settings.page').then(m => m.NotificationSettingsPage) },
       { path: 'more', loadComponent: () => import('./features/more/more.page').then(m => m.MorePage) },
       { path: 'more/profile/resign', loadComponent: () => import('./features/people/resign/resign.page').then(m => m.ResignPage) },
       { path: 'more/profile', loadComponent: () => import('./features/people/my-profile/my-profile.page').then(m => m.MyProfilePage) },

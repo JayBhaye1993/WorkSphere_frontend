@@ -10,11 +10,12 @@ import { AvatarComponent } from '../../shared/avatar.component';
 import { ToastService } from '../../core/services/toast.service';
 import { saveBlob } from '../../core/util/download';
 import { BalanceCardComponent } from './balance-card.component';
+import { BellComponent } from '../notifications/bell.component';
 
 /** The Time off tab: balances, what's waiting for you, your requests, who's off this week and holidays. */
 @Component({
   standalone: true,
-  imports: [RouterLink, AvatarComponent, BalanceCardComponent, LucideCalendarDays, LucideChevronRight, LucidePlus, LucideX, LucideInbox, LucidePalmtree, LucideUsers],
+  imports: [BellComponent, RouterLink, AvatarComponent, BalanceCardComponent, LucideCalendarDays, LucideChevronRight, LucidePlus, LucideX, LucideInbox, LucidePalmtree, LucideUsers],
   template: `
     <div class="mx-auto max-w-[960px] min-h-full pb-28 lg:pb-8">
       <header class="sticky top-0 z-10 bg-white border-b border-slate-200 px-4 pt-5 pb-3 flex items-center gap-2">
@@ -25,6 +26,7 @@ import { BalanceCardComponent } from './balance-card.component';
           <a routerLink="/time-off/team" aria-label="Team leave overview" title="Team leave overview" class="w-11 h-11 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-800"><svg lucideUsers [size]="20" aria-hidden="true"></svg></a>
         }
         <a routerLink="/time-off/calendar" aria-label="Team calendar" title="Team calendar" class="w-11 h-11 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-800"><svg lucideCalendarDays [size]="20" aria-hidden="true"></svg></a>
+        <ws-bell class="lg:hidden" />
         <a routerLink="/time-off/apply" class="hidden lg:inline-flex ws-btn ws-btn-primary !h-11 items-center gap-1.5 no-underline"><svg lucidePlus [size]="18" aria-hidden="true"></svg>Apply</a>
       </header>
 
