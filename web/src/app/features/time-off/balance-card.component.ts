@@ -23,6 +23,7 @@ import { num } from './time-off-format';
         }
         <span class="text-[12px] text-slate-600 leading-snug">{{ detail() }}</span>
       }
+      @if (x.note) { <span class="text-[12px] font-medium leading-snug" [class]="x.note.includes('expired') ? 'text-slate-500' : 'text-amber-800'">{{ x.note }}</span> }
     </div>
   `,
 })
@@ -31,6 +32,16 @@ export class BalanceCardComponent {
   readonly total = computed(() => { const x = this.b(); return x.accrued + x.carried + x.adjusted; });
   readonly detail = computed(() => {
     const x = this.b(); const parts: string[] = [];
+    if (x.kind === 'CompOff') {
+      parts.push(`${num(x.accrued)} earned`);
+      if (x.used) parts.push(`${num(x.used)} used`);
+      if (x.pending) parts.push(`${num(x.pending)} pending`);
+      return parts.join(' · ');
+    }
+    if (x.kind === 'OptionalHoliday') {
+      parts.push(`${num(x.used + x.pending)} of ${num(x.accrued)} picked`);
+      return parts.join(' · ');
+    }
     parts.push(x.accrual === 'Monthly' ? `${num(x.accrued)} of ${num(x.yearlyAllowance)} earned so far` : `of ${num(x.accrued + x.carried + x.adjusted)}`);
     if (x.carried) parts.push(`${num(x.carried)} carried over`);
     if (x.adjusted) parts.push(`${x.adjusted > 0 ? '+' : ''}${num(x.adjusted)} by HR`);

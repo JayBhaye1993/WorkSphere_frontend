@@ -33,6 +33,7 @@ export const routes: Routes = [
       { path: 'time-off/apply', loadComponent: () => import('./features/time-off/apply.page').then(m => m.ApplyPage) },
       { path: 'time-off/approvals', loadComponent: () => import('./features/time-off/approvals.page').then(m => m.ApprovalsPage) },
       { path: 'time-off/calendar', loadComponent: () => import('./features/time-off/calendar.page').then(m => m.CalendarPage) },
+      { path: 'time-off/comp-off', loadComponent: () => import('./features/time-off/comp-off.page').then(m => m.CompOffPage) },
       { path: 'time-off/holidays', loadComponent: () => import('./features/time-off/holidays.page').then(m => m.HolidaysPage) },
       { path: 'more', loadComponent: () => import('./features/more/more.page').then(m => m.MorePage) },
       { path: 'more/profile/resign', loadComponent: () => import('./features/people/resign/resign.page').then(m => m.ResignPage) },

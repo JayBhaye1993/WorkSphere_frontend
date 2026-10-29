@@ -3,7 +3,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { LucideArrowLeft, LucideCheck, LucidePlus, LucideX } from '@lucide/angular';
 import { TimeOffService } from '../time-off.service';
-import { ApprovalFlow, LeaveRules, LeaveType, LeaveTypeInput, NO_RULES, TenureStep } from '../time-off.models';
+import { ApprovalFlow, LeaveKind, LeaveRules, LeaveType, LeaveTypeInput, NO_RULES, TenureStep } from '../time-off.models';
 import { errorText } from '../../people/people-errors';
 import { ToastService } from '../../../core/services/toast.service';
 import { SettingsService } from '../../settings/settings.service';
@@ -33,6 +33,18 @@ const COLORS = ['#0ea5e9', '#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#ec4899'
       @if (loadError()) { <div class="m-4 ws-alert" role="alert">{{ loadError() }}</div> }
       @else {
       <form class="p-4 flex flex-col gap-5" (submit)="$event.preventDefault(); save()">
+        @if (!id) {
+          <fieldset class="m-0 p-0 border-0 flex flex-col gap-2">
+            <legend class="p-0 mb-2 text-[14px] font-semibold">Kind</legend>
+            @for (k of kinds; track k.v) {
+              <button type="button" class="flow" [attr.aria-pressed]="kind() === k.v" (click)="setKind(k.v)">
+                <span class="text-[15px] font-semibold text-slate-900">{{ k.label }}</span><span class="text-[12px] text-slate-600">{{ k.hint }}</span>
+              </button>
+            }
+          </fieldset>
+        } @else if (kind() !== 'Regular') {
+          <p class="m-0 px-3 py-2 rounded-10 bg-indigo-50 text-[13px] text-indigo-900">{{ kind() === 'CompOff' ? 'Comp-off: earned by working on a weekend or holiday.' : 'Optional holidays: people pick from the optional holiday list.' }}</p>
+        }
         <label class="ws-field">Name
           <input class="ws-input" [value]="name()" (input)="name.set($any($event.target).value)" maxlength="100" placeholder="e.g. Casual Leave" [attr.aria-invalid]="tried() && !name().trim()" />
         </label>
@@ -50,6 +62,20 @@ const COLORS = ['#0ea5e9', '#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#ec4899'
           </div>
         </fieldset>
 
+        @if (kind() === 'CompOff') {
+          <section class="ws-card !gap-0">
+            <h2 class="ws-card-h !mb-2">Comp-off</h2>
+            <label class="row"><span class="flex-1 text-[15px]">Use within (days of working)</span><input class="ws-input num" type="number" min="1" max="365" step="1" [value]="expiry()" (input)="expiry.set(+$any($event.target).value)" /></label>
+            <label class="row"><span class="flex-1 text-[15px]">Claim within (days of working)<br /><span class="text-[12px] text-slate-600">HR can still add older claims.</span></span><input class="ws-input num" type="number" min="1" max="365" step="1" [value]="window()" (input)="window.set(+$any($event.target).value)" /></label>
+          </section>
+        }
+        @if (kind() === 'OptionalHoliday') {
+          <section class="ws-card !gap-0">
+            <h2 class="ws-card-h !mb-2">Quota</h2>
+            <label class="row"><span class="flex-1 text-[15px]">Optional holidays each person can pick a year</span><input class="ws-input num" type="number" min="1" max="20" step="1" [value]="days()" (input)="days.set($any($event.target).value)" /></label>
+          </section>
+        }
+        @if (kind() === 'Regular') {
         <section class="ws-card !gap-0">
           <h2 class="ws-card-h !mb-2">Allowance</h2>
           <label class="row"><span class="flex-1 text-[15px]">No limit<br /><span class="text-[12px] text-slate-600">For unpaid leave or work from home</span></span><input type="checkbox" class="sw" [checked]="unlimited()" (change)="unlimited.set($any($event.target).checked)" /></label>
@@ -67,6 +93,7 @@ const COLORS = ['#0ea5e9', '#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#ec4899'
           }
         </section>
 
+        }
         <section class="ws-card !gap-0">
           <h2 class="ws-card-h !mb-2">Rules</h2>
           <label class="row"><span class="flex-1 text-[15px]">Paid</span><input type="checkbox" class="sw" [checked]="paid()" (change)="paid.set($any($event.target).checked)" /></label>
@@ -93,6 +120,7 @@ const COLORS = ['#0ea5e9', '#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#ec4899'
           <label class="row"><span class="flex-1 text-[15px]">Reason required</span><input type="checkbox" class="sw" [checked]="rules().reasonRequired" (change)="setFlag('reasonRequired', $event)" /></label>
         </section>
 
+        @if (kind() !== 'OptionalHoliday') {
         <section class="ws-card !gap-0">
           <h2 class="ws-card-h !mb-1">Sandwich rule</h2>
           <p class="m-0 mb-1 text-[12px] text-slate-600">Days off between two leave days count as leave, e.g. Friday and Monday off makes 4 days.</p>
@@ -104,7 +132,8 @@ const COLORS = ['#0ea5e9', '#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#ec4899'
           }
         </section>
 
-        @if (!unlimited()) {
+        }
+        @if (!unlimited() && kind() === 'Regular') {
           <section class="ws-card">
             <h2 class="ws-card-h">More days with service</h2>
             @for (t of rules().tenure; track $index; let i = $index) {
@@ -175,6 +204,18 @@ export class LeaveTypeEditPage {
   readonly chosen = signal<string[]>([]); readonly usedBy = signal(0);
   readonly employmentTypes = signal<{ id: string; name: string }[]>([]);
   readonly rules = signal<LeaveRules>({ ...NO_RULES });
+  readonly kind = signal<LeaveKind>('Regular');
+  readonly expiry = signal(90); readonly window = signal(30);
+  readonly kinds: { v: LeaveKind; label: string; hint: string }[] = [
+    { v: 'Regular', label: 'Leave with an allowance', hint: 'Casual, sick, earned, unpaid, work from home…' },
+    { v: 'CompOff', label: 'Comp-off', hint: 'Earned by working on a weekend or holiday; each day expires.' },
+    { v: 'OptionalHoliday', label: 'Optional holidays', hint: 'People pick a few days from the optional holiday list.' },
+  ];
+  setKind(k: LeaveKind) {
+    this.kind.set(k);
+    if (k === 'OptionalHoliday') { this.days.set(2); this.half.set(false); this.unlimited.set(false); if (!this.name()) this.name.set('Optional Holiday'); }
+    if (k === 'CompOff' && !this.name()) this.name.set('Comp Off');
+  }
   readonly allTypes = signal<LeaveType[]>([]);
   readonly others = computed(() => this.allTypes().filter(t => t.id !== this.id));
   readonly flows: { v: ApprovalFlow; label: string; hint: string }[] = [
@@ -203,6 +244,7 @@ export class LeaveTypeEditPage {
         this.carry.set(t.carryForwardMax); this.paid.set(t.isPaid); this.half.set(t.allowHalfDay);
         this.docOn.set(t.documentAfterDays !== null); this.docAfter.set(t.documentAfterDays ?? 2);
         this.active.set(t.isActive); this.chosen.set(t.employmentTypeIds); this.usedBy.set(t.usedBy);
+        this.kind.set(t.kind ?? 'Regular'); this.expiry.set(t.expiryDays ?? 90); this.window.set(t.claimWindowDays ?? 30);
         this.rules.set({ ...NO_RULES, ...t.rules, tenure: [...(t.rules?.tenure ?? [])], noClubWith: [...(t.rules?.noClubWith ?? [])] });
       }
     } catch (e) { this.loadError.set(errorText(e, 'Could not load this type.')); }
@@ -228,13 +270,14 @@ export class LeaveTypeEditPage {
   async save() {
     this.tried.set(true); this.error.set(null);
     if (!this.name().trim()) { this.error.set('Give it a name.'); return; }
-    if (!this.unlimited() && !this.daysOk()) { this.error.set('Days a year must be between 0.5 and 365, in half days.'); return; }
+    if (this.kind() === 'Regular' && !this.unlimited() && !this.daysOk()) { this.error.set('Days a year must be between 0.5 and 365, in half days.'); return; }
     const body: LeaveTypeInput = {
       name: this.name().trim(), description: this.description().trim() || null, color: this.color(),
-      daysPerYear: this.unlimited() ? null : Number(this.days()), accrual: this.accrual(),
+      daysPerYear: this.kind() === 'CompOff' || (this.kind() === 'Regular' && this.unlimited()) ? null : Number(this.days()), accrual: this.accrual(),
       isPaid: this.paid(), allowHalfDay: this.half(), carryForwardMax: this.unlimited() ? 0 : Number(this.carry()) || 0,
       documentAfterDays: this.docOn() ? Number(this.docAfter()) || 0 : null, employmentTypeIds: this.chosen(), isActive: this.active(),
       rules: { ...this.rules(), tenure: this.rules().tenure.filter(t => t.afterYears > 0 && t.extraDays > 0) },
+      kind: this.kind(), expiryDays: this.kind() === 'CompOff' ? this.expiry() : null, claimWindowDays: this.kind() === 'CompOff' ? this.window() : null,
     };
     this.saving.set(true);
     try {

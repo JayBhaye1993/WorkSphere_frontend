@@ -34,7 +34,10 @@ import { AuthService } from '../../core/auth/auth.service';
               @for (h of g.items; track h.id) {
                 <li class="flex items-center gap-3 px-4 py-3 border-b border-slate-100 last:border-b-0" [class.opacity-60]="h.date < today">
                   <span class="w-11 shrink-0 text-center text-[20px] font-bold">{{ dayNo(h.date) }}</span>
-                  <span class="flex-1 flex flex-col"><span class="text-[15px] font-semibold">{{ h.name }}</span><span class="text-[12px] text-slate-600">{{ wd(h.date) }}@if (h.isOptional) { · optional: take it from your leave if you want it off }</span></span>
+                  <span class="flex-1 flex flex-col"><span class="text-[15px] font-semibold">{{ h.name }}</span><span class="text-[12px] text-slate-600">{{ wd(h.date) }}@if (h.isOptional) { · optional{{ optionalType() ? '' : ': take it from your leave if you want it off' }} }</span></span>
+                  @if (h.isOptional && optionalType() && h.date >= today) {
+                    <a [routerLink]="['/time-off/apply']" [queryParams]="{ type: optionalType(), date: h.date }" class="h-9 px-3 flex items-center rounded-full border border-indigo-200 bg-indigo-50 text-[13px] font-semibold text-indigo-700 no-underline">Take it</a>
+                  }
                 </li>
               }
             </ul>
@@ -50,6 +53,7 @@ export class HolidaysPage {
   readonly today = todayIso();
   readonly year = signal(new Date().getFullYear());
   readonly items = signal<Holiday[]>([]);
+  readonly optionalType = signal<string | null>(null);
   readonly loading = signal(true); readonly error = signal<string | null>(null);
   readonly groups = computed(() => {
     const out: { month: string; items: Holiday[] }[] = [];
@@ -60,7 +64,10 @@ export class HolidaysPage {
     }
     return out;
   });
-  constructor() { void this.load(); }
+  constructor() {
+    void this.load();
+    firstValueFrom(this.svc.options()).then(o => this.optionalType.set(o.find(t => t.kind === 'OptionalHoliday')?.id ?? null)).catch(() => {});
+  }
   async load() {
     this.loading.set(true); this.error.set(null);
     try { this.items.set(await firstValueFrom(this.svc.holidays(this.year(), true))); }

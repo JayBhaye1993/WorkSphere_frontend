@@ -49,7 +49,9 @@ import { BalanceCardComponent } from './balance-card.component';
             </section>
 
             <section class="flex flex-col gap-2" aria-labelledby="req-h">
-              <div class="flex items-center px-1"><h2 id="req-h" class="m-0 flex-1 text-[13px] font-semibold text-slate-600 uppercase tracking-[.06em]">Your requests</h2></div>
+              <div class="flex items-center px-1"><h2 id="req-h" class="m-0 flex-1 text-[13px] font-semibold text-slate-600 uppercase tracking-[.06em]">Your requests</h2>
+                @if (d.compOffEnabled) { <a routerLink="/time-off/comp-off" class="text-[13px] font-semibold">Claim comp-off@if (pendingClaims() > 0) { ({{ pendingClaims() }} pending)}</a> }
+              </div>
               @if (!d.requests.length) {
                 <div class="p-5 rounded-14 bg-white border border-slate-200 text-center flex flex-col items-center gap-2">
                   <svg lucidePalmtree [size]="28" class="text-emerald-600" aria-hidden="true"></svg>
@@ -158,6 +160,7 @@ export class TimeOffPage {
     return this.all() ? list : list.slice(0, 6);
   });
 
+  readonly pendingClaims = computed(() => (this.data()?.compOffs ?? []).filter(c => c.status === 'Pending').length);
   readonly upcomingHolidays = computed(() => (this.data()?.holidays ?? []).filter(h => h.date >= todayIso()).slice(0, 4));
 
   readonly offThisWeek = computed(() => {

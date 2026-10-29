@@ -3,7 +3,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { LucideArrowLeft, LucideChevronDown } from '@lucide/angular';
 import { TimeOffService } from './time-off.service';
-import { Half, LeaveBalance, LeavePreview, LeaveTypeOption } from './time-off.models';
+import { Half, Holiday, LeaveBalance, LeavePreview, LeaveTypeOption } from './time-off.models';
 import { addDays, days, fmt, num, parseDay, todayIso, weekday } from './time-off-format';
 import { errorText } from '../people/people-errors';
 import { ToastService } from '../../core/services/toast.service';
@@ -35,7 +35,7 @@ type DayPart = 'Full' | 'First' | 'Second';
             <legend class="p-0 mb-2 text-[14px] font-semibold">Type</legend>
             <div class="grid grid-cols-2 gap-2">
               @for (t of types(); track t.id) {
-                <button type="button" (click)="typeId.set(t.id)" [attr.aria-pressed]="typeId() === t.id"
+                <button type="button" (click)="pickType(t)" [attr.aria-pressed]="typeId() === t.id"
                         class="min-h-[64px] p-3 rounded-12 border text-left flex flex-col gap-1 cursor-pointer bg-white"
                         [class]="typeId() === t.id ? 'border-indigo-600 ring-2 ring-indigo-100' : 'border-slate-300'">
                   <span class="flex items-center gap-2 text-[14px] font-semibold text-slate-900"><span class="w-2.5 h-2.5 rounded-full shrink-0" [style.background]="t.color" aria-hidden="true"></span>{{ t.name }}</span>
@@ -46,6 +46,20 @@ type DayPart = 'Full' | 'First' | 'Second';
             @if (type()?.description) { <p class="m-0 text-[13px] text-slate-600">{{ type()!.description }}</p> }
           </fieldset>
 
+          @if (type()?.kind === 'OptionalHoliday') {
+            <fieldset class="m-0 p-0 border-0 flex flex-col gap-2">
+              <legend class="p-0 mb-2 text-[14px] font-semibold">Which holiday</legend>
+              <div class="flex flex-col gap-2">
+                @for (h of optionalDays(); track h.id) {
+                  <button type="button" (click)="setFrom(h.date); setTo(h.date)" [attr.aria-pressed]="from() === h.date"
+                          class="min-h-[52px] px-4 rounded-12 border text-left flex items-center gap-3 bg-white cursor-pointer"
+                          [class]="from() === h.date ? 'border-indigo-600 ring-2 ring-indigo-100' : 'border-slate-300'">
+                    <span class="w-20 text-[14px] font-semibold">{{ wd(h.date) }} {{ f(h.date) }}</span><span class="text-[15px]">{{ h.name }}</span>
+                  </button>
+                } @empty { <p class="m-0 text-[14px] text-slate-600">No optional holidays coming up.</p> }
+              </div>
+            </fieldset>
+          } @else {
           <div class="grid grid-cols-2 gap-3">
             <label class="ws-field">From
               <input class="ws-input" type="date" [value]="from()" (change)="setFrom($any($event.target).value)" required />
@@ -55,7 +69,8 @@ type DayPart = 'Full' | 'First' | 'Second';
             </label>
           </div>
 
-          @if (type()?.allowHalfDay) {
+          }
+          @if (type()?.allowHalfDay && type()?.kind !== 'OptionalHoliday') {
             @if (single()) {
               <div class="grid grid-cols-3 p-1 rounded-12 bg-slate-100" role="group" aria-label="How much of the day">
                 @for (o of parts; track o.v) { <button type="button" class="seg" [class.seg-on]="part() === o.v" [attr.aria-pressed]="part() === o.v" (click)="part.set(o.v)">{{ o.label }}</button> }
@@ -116,7 +131,9 @@ export class ApplyPage {
   private readonly svc = inject(TimeOffService);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
-  private readonly forId = inject(ActivatedRoute).snapshot.queryParamMap.get('for');
+  private readonly query = inject(ActivatedRoute).snapshot.queryParamMap;
+  private readonly forId = this.query.get('for');
+  readonly optionalDays = signal<Holiday[]>([]);
 
   readonly parts: { v: DayPart; label: string }[] = [{ v: 'Full', label: 'Full day' }, { v: 'First', label: 'First half' }, { v: 'Second', label: 'Second half' }];
   readonly loading = signal(true); readonly loadError = signal<string | null>(null);
@@ -162,9 +179,16 @@ export class ApplyPage {
                    : firstValueFrom(this.svc.me()).then(x => x.balances),
       ]);
       this.types.set(types); this.balances.set(bal);
-      if (types.length) this.typeId.set(types[0].id);
-      const start = this.nextWorkingDay();
+      const wanted = this.query.get('type');
+      this.typeId.set(types.find(t => t.id === wanted)?.id ?? types.find(t => t.kind === 'Regular')?.id ?? types[0]?.id ?? null);
+      const date = this.query.get('date');
+      const start = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : this.nextWorkingDay();
       this.from.set(start); this.to.set(start);
+      if (types.some(t => t.kind === 'OptionalHoliday')) {
+        const y = new Date().getFullYear(); const today = todayIso();
+        const [a, b] = await Promise.all([firstValueFrom(this.svc.holidays(y, !this.forId)), firstValueFrom(this.svc.holidays(y + 1, !this.forId))]);
+        this.optionalDays.set([...a, ...b].filter(h => h.isOptional && h.date >= today));
+      }
     } catch (e) { this.loadError.set(errorText(e, 'Could not load time off types.')); }
     finally { this.loading.set(false); }
   }
@@ -187,6 +211,14 @@ export class ApplyPage {
         if (mine === this.seq) this.preview.set({ days: 0, breakdown: [], unlimited: false, available: null, after: null, needsDocument: false, error: errorText(e, 'Could not count the days.'), notes: [] });
       } finally { if (mine === this.seq) this.previewing.set(false); }
     }, 250);
+  }
+
+  pickType(t: LeaveTypeOption) {
+    this.typeId.set(t.id);
+    if (t.kind === 'OptionalHoliday') {
+      const first = this.optionalDays().find(h => h.date === this.from()) ?? this.optionalDays()[0];
+      if (first) { this.from.set(first.date); this.to.set(first.date); }
+    }
   }
 
   setFrom(v: string) { if (!v) return; this.from.set(v); if (this.to() < v) this.to.set(v); }

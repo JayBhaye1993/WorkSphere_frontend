@@ -57,6 +57,8 @@ export class LeaveTypesPage {
       .catch(e => this.error.set(errorText(e, 'Could not load time off types.'))).finally(() => this.loading.set(false));
   }
   summary(t: LeaveType): string {
+    if (t.kind === 'CompOff') return `Comp-off · use within ${t.expiryDays ?? '–'} days · claim within ${t.claimWindowDays ?? '–'} days`;
+    if (t.kind === 'OptionalHoliday') return `Pick ${num(t.daysPerYear)} optional holidays a year`;
     const p = [t.daysPerYear === null ? 'No limit' : `${num(t.daysPerYear)} days a year${t.accrual === 'Monthly' ? ', built up monthly' : ''}`];
     if (!t.isPaid) p.push('unpaid');
     if (t.carryForwardMax > 0) p.push(`carry up to ${num(t.carryForwardMax)}`);

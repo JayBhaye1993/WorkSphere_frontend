@@ -3,7 +3,7 @@ import { Observable } from 'rxjs';
 import { ApiService } from '../../core/api/api.service';
 import { environment } from '../../../environments/environment';
 import {
-  EmployeeTimeOff, Holiday, HolidayInput, LeaveCalendar, LeaveInput, LeavePreview, LeaveRequest, LeaveSettings,
+  CompOffClaim, EmployeeTimeOff, Holiday, HolidayInput, LeaveCalendar, LeaveInput, LeavePreview, LeaveRequest, LeaveSettings,
   LeaveType, LeaveTypeInput, LeaveTypeOption, MyTimeOff,
 } from './time-off.models';
 
@@ -26,6 +26,13 @@ export class TimeOffService {
   adjust(id: string, body: { leaveTypeId: string; year: number; days: number; note: string }): Observable<EmployeeTimeOff> {
     return this.api.post(`${this.base}/employees/${id}/adjust`, body);
   }
+
+  claimCompOff(b: { employeeId?: string | null; workedDate: string; days: number; reason: string }): Observable<CompOffClaim> { return this.api.post(`${this.base}/comp-off`, b); }
+  myCompOff(): Observable<CompOffClaim[]> { return this.api.get(`${this.base}/comp-off/mine`); }
+  compOffApprovals(): Observable<CompOffClaim[]> { return this.api.get(`${this.base}/comp-off/approvals`); }
+  approveCompOff(id: string): Observable<CompOffClaim> { return this.api.post(`${this.base}/comp-off/${id}/approve`, {}); }
+  rejectCompOff(id: string, reason: string): Observable<CompOffClaim> { return this.api.post(`${this.base}/comp-off/${id}/reject`, { reason }); }
+  cancelCompOff(id: string): Observable<CompOffClaim> { return this.api.post(`${this.base}/comp-off/${id}/cancel`, {}); }
 
   settings(): Observable<LeaveSettings> { return this.api.get(`${this.base}/settings`); }
   saveSettings(s: { weekendDays: number[]; yearStartMonth: number }): Observable<LeaveSettings> { return this.api.put(`${this.base}/settings`, s); }

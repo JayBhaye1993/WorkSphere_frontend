@@ -1,6 +1,13 @@
 export interface LeaveBalance {
   leaveTypeId: string; name: string; color: string; isPaid: boolean; unlimited: boolean; accrual: 'Yearly' | 'Monthly';
   yearlyAllowance: number | null; accrued: number; carried: number; adjusted: number; used: number; pending: number; available: number | null;
+  note: string | null; kind: LeaveKind;
+}
+export type LeaveKind = 'Regular' | 'CompOff' | 'OptionalHoliday';
+export interface CompOffClaim {
+  id: string; employeeId: string; employeeName: string; workedDate: string; workedLabel: string; days: number; reason: string;
+  status: 'Pending' | 'Approved' | 'Rejected' | 'Cancelled'; expiresOn: string | null; appliedByName: string | null;
+  decidedByName: string | null; decidedAt: string | null; decisionNote: string | null; canCancel: boolean; canDecide: boolean;
 }
 export type LeaveStatus = 'Pending' | 'Approved' | 'Rejected' | 'Cancelled';
 export type Half = 'First' | 'Second' | null;
@@ -15,12 +22,12 @@ export interface Holiday { id: string; date: string; name: string; isOptional: b
 export interface MyTimeOff {
   employeeId: string | null; name: string | null; year: number; yearLabel: string; yearStart: string; yearEnd: string;
   weekendDays: number[]; balances: LeaveBalance[]; requests: LeaveRequest[]; holidays: Holiday[];
-  pendingApprovals: number; canApprove: boolean; canManage: boolean;
+  pendingApprovals: number; canApprove: boolean; canManage: boolean; compOffEnabled: boolean; compOffs: CompOffClaim[];
 }
 export interface LeaveTypeOption {
   id: string; name: string; color: string; allowHalfDay: boolean; isPaid: boolean; unlimited: boolean;
   documentAfterDays: number | null; description: string | null;
-  reasonRequired: boolean; noticeDays: number | null; approvalFlow: 'Manager' | 'ManagerThenHr' | 'Auto'; sandwich: boolean;
+  reasonRequired: boolean; noticeDays: number | null; approvalFlow: 'Manager' | 'ManagerThenHr' | 'Auto'; sandwich: boolean; kind: LeaveKind;
 }
 export interface PreviewDay { date: string; kind: string; days: number; name: string | null; }
 export interface LeavePreview {
@@ -55,6 +62,7 @@ export interface LeaveType {
   id: string; name: string; description: string | null; color: string; daysPerYear: number | null; accrual: 'Yearly' | 'Monthly';
   isPaid: boolean; allowHalfDay: boolean; carryForwardMax: number; documentAfterDays: number | null;
   employmentTypeIds: string[]; isActive: boolean; sortOrder: number; usedBy: number; rules: LeaveRules;
+  kind: LeaveKind; expiryDays: number | null; claimWindowDays: number | null;
 }
 export type LeaveTypeInput = Omit<LeaveType, 'id' | 'sortOrder' | 'usedBy'>;
 export interface LeaveSettings { weekendDays: number[]; yearStartMonth: number; yearLabel: string; yearStart: string; yearEnd: string; }
