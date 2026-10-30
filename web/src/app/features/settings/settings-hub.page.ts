@@ -6,6 +6,7 @@ import { SettingsService } from './settings.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { AccessService } from '../access/access.service';
 import { TimeOffService } from '../time-off/time-off.service';
+import { AttendanceService } from '../attendance/attendance.service';
 
 interface Row { name: string; hint: string; link: string; count: string; }
 
@@ -45,6 +46,7 @@ export class SettingsHubPage {
   private readonly access = inject(AccessService);
   private readonly auth = inject(AuthService);
   private readonly timeOff = inject(TimeOffService);
+  private readonly att = inject(AttendanceService);
   readonly groups = signal<{ title: string; rows: Row[] }[]>(this.build({}));
 
   constructor() { void this.counts(); }
@@ -77,6 +79,10 @@ export class SettingsHubPage {
         r('Time off types', 'Allowances, carry forward, who gets each', 'leave-types', 'leave-types'),
         r('Holidays', 'Public holidays for each location', 'holidays', 'holidays'),
         r('Work week and leave year', 'Weekend days and when the year starts', 'time-off', 'time-off'),
+      ] },
+      { title: 'Attendance', rows: [
+        r('Shifts', 'Working hours, late mark, full and half day', 'shifts', 'shifts'),
+        r('Attendance machines', 'Thumb or face machines and people’s IDs', 'attendance-machines', 'attendance-machines'),
       ] }]),
       { title: 'Access', rows: access },
     ];
@@ -86,12 +92,14 @@ export class SettingsHubPage {
 
   private async counts() {
     if (this.auth.can('leave.manage')) {
-      const [lt, hol, ls] = await Promise.all([
+      const [lt, hol, ls, sh, dv] = await Promise.all([
         firstValueFrom(this.timeOff.types().pipe(catchError(() => of(null)))),
         firstValueFrom(this.timeOff.holidays(new Date().getFullYear()).pipe(catchError(() => of(null)))),
         firstValueFrom(this.timeOff.settings().pipe(catchError(() => of(null)))),
+        firstValueFrom(this.att.shifts().pipe(catchError(() => of(null)))),
+        firstValueFrom(this.att.devices().pipe(catchError(() => of(null)))),
       ]);
-      this.leave = { 'leave-types': lt ? String(lt.length) : '', holidays: hol ? String(hol.length) : '', 'time-off': ls?.yearLabel ?? '' };
+      this.leave = { 'leave-types': lt ? String(lt.length) : '', holidays: hol ? String(hol.length) : '', 'time-off': ls?.yearLabel ?? '', shifts: sh ? String(sh.length) : '', 'attendance-machines': dv ? String(dv.length) : '' };
     }
     const n = (p: string, params?: Record<string, unknown>) => firstValueFrom(this.svc.list<unknown>(p, params).pipe(catchError(() => of(null))));
     const [users, roles] = await Promise.all([

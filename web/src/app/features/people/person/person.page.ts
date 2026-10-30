@@ -64,7 +64,10 @@ interface Row { label: string; value?: string; chips?: string[]; mono?: boolean;
             <a [href]="'mailto:' + c.email" class="action"><svg lucideMail [size]="18" aria-hidden="true"></svg>Email</a>
           </div>
           @if (c.status !== 'Exited') {
-            <a [routerLink]="['/people/org']" [queryParams]="{ focus: c.id }" class="mt-1 min-h-[44px] flex items-center text-[14px] font-semibold">See in org chart</a>
+            <span class="mt-1 flex flex-wrap justify-center gap-x-5">
+              <a [routerLink]="['/people/org']" [queryParams]="{ focus: c.id }" class="min-h-[44px] flex items-center text-[14px] font-semibold">See in org chart</a>
+              @if (canSeeAttendance) { <a [routerLink]="['/attendance/people', c.id]" class="min-h-[44px] flex items-center text-[14px] font-semibold">Attendance</a> }
+            </span>
           }
           @if (c.leavingOn) {
             <p class="mt-2 mb-0 w-full px-3 py-2 rounded-10 text-[14px] font-semibold" [class.banner-leaving]="c.status !== 'Exited'" [class.banner-left]="c.status === 'Exited'" role="status">
@@ -172,6 +175,7 @@ export class PersonPage {
   private readonly auth = inject(AuthService);
   readonly canEdit = this.auth.can('employees.edit');
   readonly canExit = this.auth.can('employees.exit');
+  readonly canSeeAttendance = this.auth.can('attendance.regularise') || this.auth.can('leave.approve') || this.auth.can('leave.manage');
 
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
