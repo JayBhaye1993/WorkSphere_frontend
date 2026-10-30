@@ -80,14 +80,19 @@ export class HomePage {
     { name: 'My attendance', link: '/attendance', icon: 'att', tone: 'bg-indigo-50 text-indigo-700', badge: 0 },
     { name: 'Apply for time off', link: '/time-off/apply', icon: 'leave', tone: 'bg-violet-50 text-violet-700', badge: 0 },
     { name: 'My tasks', link: '/tasks', icon: 'tasks', tone: 'bg-sky-50 text-sky-700', badge: 0 },
-    ...(this.canApprove ? [{ name: 'Approvals', link: '/time-off/approvals', icon: 'approvals', tone: 'bg-amber-50 text-amber-700', badge: this.approvals() }] : []),
+    ...(this.canApprove || this.canTeam ? [{ name: 'Approvals', link: '/time-off/approvals', icon: 'approvals', tone: 'bg-amber-50 text-amber-700', badge: this.approvals() }] : []),
     ...(this.canTeam ? [{ name: 'Who’s in today', link: '/attendance/team', icon: 'team', tone: 'bg-emerald-50 text-emerald-700', badge: 0 }] : []),
     { name: 'Holidays', link: '/time-off/holidays', icon: 'hol', tone: 'bg-teal-50 text-teal-700', badge: 0 },
   ]);
 
   constructor() {
     void this.load();
-    if (this.canApprove) firstValueFrom(this.timeOff.approvals().pipe(catchError(() => of([])))).then(x => this.approvals.set(x.length));
+    if (this.canApprove || this.canTeam)
+      Promise.all([
+        firstValueFrom(this.timeOff.approvals().pipe(catchError(() => of([])))),
+        firstValueFrom(this.timeOff.compOffApprovals().pipe(catchError(() => of([])))),
+        firstValueFrom(this.att.approvals().pipe(catchError(() => of([])))),
+      ]).then(([a, b, c]) => this.approvals.set(a.length + b.length + c.length));
   }
   async load() {
     try { this.month.set(await firstValueFrom(this.att.me())); }

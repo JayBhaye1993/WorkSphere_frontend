@@ -82,6 +82,7 @@ export class SettingsHubPage {
       ] },
       { title: 'Attendance', rows: [
         r('Shifts', 'Working hours, late mark, full and half day', 'shifts', 'shifts'),
+        r('Attendance rules', 'Corrections, work from home, overtime, reminders', 'attendance-rules', 'attendance-rules'),
         r('Attendance machines', 'Thumb or face machines and people’s IDs', 'attendance-machines', 'attendance-machines'),
       ] }]),
       { title: 'Access', rows: access },

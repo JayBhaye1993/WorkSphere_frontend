@@ -59,6 +59,7 @@ export const routes: Routes = [
           { path: 'leave-types/:id', canActivate: [permissionGuard('leave.manage')], loadComponent: () => import('./features/time-off/settings/leave-type-edit.page').then(m => m.LeaveTypeEditPage) },
           { path: 'holidays', canActivate: [permissionGuard('leave.manage')], loadComponent: () => import('./features/time-off/settings/holidays-settings.page').then(m => m.HolidaysSettingsPage) },
           { path: 'shifts', canActivate: [permissionGuard('leave.manage')], loadComponent: () => import('./features/attendance/settings/shifts.page').then(m => m.ShiftsPage) },
+          { path: 'attendance-rules', canActivate: [permissionGuard('leave.manage')], loadComponent: () => import('./features/attendance/settings/rules.page').then(m => m.AttendanceRulesPage) },
           { path: 'attendance-machines', canActivate: [permissionGuard('leave.manage')], loadComponent: () => import('./features/attendance/settings/machines.page').then(m => m.MachinesPage) },
           { path: 'time-off', canActivate: [permissionGuard('leave.manage')], loadComponent: () => import('./features/time-off/settings/time-off-settings.page').then(m => m.TimeOffSettingsPage) },
           { path: ':kind', canActivate: [permissionGuard('org.manage')], loadComponent: () => import('./features/settings/org-list.page').then(m => m.OrgListPage) },

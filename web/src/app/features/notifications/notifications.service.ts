@@ -4,7 +4,7 @@ import { ApiService } from '../../core/api/api.service';
 import { environment } from '../../../environments/environment';
 
 export interface InboxItem {
-  id: string; category: 'TimeOff' | 'People' | 'Tasks' | 'Account'; kind: string; title: string; body: string | null;
+  id: string; category: 'TimeOff' | 'Attendance' | 'People' | 'Tasks' | 'Account'; kind: string; title: string; body: string | null;
   link: string | null; actorName: string | null; createdAt: string; read: boolean;
 }
 export interface Inbox { items: InboxItem[]; total: number; unread: number; page: number; pageSize: number; }

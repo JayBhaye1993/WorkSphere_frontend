@@ -1,17 +1,19 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { LucideArrowLeft, LucideSearch, LucideChevronRight } from '@lucide/angular';
+import { LucideArrowLeft, LucideSearch, LucideChevronRight, LucideDownload } from '@lucide/angular';
 import { AttendanceService, STATUS_COLOR, TeamRow, TeamToday, hm } from './attendance.service';
 import { errorText } from '../people/people-errors';
 import { SkeletonComponent } from '../../shared/skeleton.component';
+import { ToastService } from '../../core/services/toast.service';
+import { saveBlob } from '../../core/util/download';
 
 type Filter = 'all' | 'in' | 'notyet' | 'late' | 'away';
 
 /** Who is in today: your team (managers) or the whole company (HR). Tap a person for their month. */
 @Component({
   standalone: true,
-  imports: [RouterLink, SkeletonComponent, LucideArrowLeft, LucideSearch, LucideChevronRight],
+  imports: [RouterLink, SkeletonComponent, LucideArrowLeft, LucideSearch, LucideChevronRight, LucideDownload],
   template: `
     <div class="mx-auto max-w-[820px] min-h-full pb-10">
       <header class="sticky top-0 z-10 h-14 px-1 bg-white border-b border-slate-200 flex items-center gap-1">
@@ -59,6 +61,19 @@ type Filter = 'all' | 'in' | 'notyet' | 'late' | 'away';
               </li>
             } @empty { <li class="px-4 py-6 text-center text-[14px] text-slate-600">{{ data()!.people.length ? 'Nobody matches.' : 'No one reports to you yet.' }}</li> }
           </ul>
+          @if (data()!.people.length) {
+            <section class="flex flex-col lg:flex-row lg:items-end gap-2 p-4 rounded-14 bg-white border border-slate-200">
+              <div class="flex-1 flex flex-col gap-0.5">
+                <h2 class="m-0 text-[15px] font-bold">Monthly register</h2>
+                <span class="text-[12px] text-slate-600">Excel: a row per person, a code per day (P, A, L, WFH, HD…), totals and overtime. {{ scope() === 'all' ? 'Everyone.' : 'Your team.' }}</span>
+              </div>
+              <div class="flex gap-2">
+                <label class="sr-only" for="reg-month">Month</label>
+                <input id="reg-month" class="ws-input !h-11 !w-auto" type="month" [max]="thisMonth" [value]="month()" (change)="month.set($any($event.target).value)" />
+                <button type="button" (click)="download()" [disabled]="downloading() || !month()" class="ws-btn ws-btn-primary !h-11 flex items-center gap-2"><svg lucideDownload [size]="17" aria-hidden="true"></svg>{{ downloading() ? 'Making…' : 'Download' }}</button>
+              </div>
+            </section>
+          }
         }
       </div>
     </div>
@@ -66,6 +81,10 @@ type Filter = 'all' | 'in' | 'notyet' | 'late' | 'away';
 })
 export class TeamTodayPage {
   private readonly svc = inject(AttendanceService);
+  private readonly toast = inject(ToastService);
+  readonly thisMonth = new Date().toISOString().slice(0, 7);
+  readonly month = signal(this.thisMonth);
+  readonly downloading = signal(false);
   readonly scopes = [{ id: 'team' as const, label: 'My team' }, { id: 'all' as const, label: 'Everyone' }];
   readonly scope = signal<'team' | 'all'>('team');
   readonly data = signal<TeamToday | null>(null);
@@ -100,6 +119,12 @@ export class TeamTodayPage {
     try { this.data.set(await firstValueFrom(this.svc.teamToday(this.scope()))); }
     catch (e) { this.error.set(errorText(e, 'Could not load today.')); }
     finally { this.loading.set(false); }
+  }
+  async download() {
+    this.downloading.set(true);
+    try { const x = await firstValueFrom(this.svc.register(this.month(), this.scope())); saveBlob(x.blob, x.name); }
+    catch (e) { this.toast.show(errorText(e, 'Could not make the register.'), 'error'); }
+    finally { this.downloading.set(false); }
   }
   setScope(s: 'team' | 'all') { this.scope.set(s); this.filter.set('all'); void this.load(); }
   color(r: TeamRow) { return STATUS_COLOR[r.day.status] ?? STATUS_COLOR['Upcoming']; }

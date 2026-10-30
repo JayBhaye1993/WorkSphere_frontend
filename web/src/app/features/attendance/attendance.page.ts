@@ -1,8 +1,8 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { LucideArrowLeft, LucideChevronLeft, LucideChevronRight, LucideUsers, LucideX, LucideFingerprintPattern, LucideSmartphone, LucideMonitor, LucideUserPen, LucideServer } from '@lucide/angular';
-import { AttDay, AttMonth, AttendanceService, PunchItem, STATUS_COLOR, Today, hm } from './attendance.service';
+import { LucideArrowLeft, LucideChevronLeft, LucideChevronRight, LucideUsers, LucideX, LucideFingerprintPattern, LucideSmartphone, LucideMonitor, LucideUserPen, LucideServer, LucideHouse, LucideClock, LucideCheck } from '@lucide/angular';
+import { AttDay, AttMonth, AttRequest, AttRules, AttendanceService, PunchItem, STATUS_COLOR, Today, hm } from './attendance.service';
 import { CheckInCardComponent } from './check-in-card.component';
 import { errorText } from '../people/people-errors';
 import { ToastService } from '../../core/services/toast.service';
@@ -16,7 +16,7 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
 @Component({
   standalone: true,
   imports: [RouterLink, CheckInCardComponent, SkeletonComponent, LucideArrowLeft, LucideChevronLeft, LucideChevronRight, LucideUsers, LucideX,
-    LucideFingerprintPattern, LucideSmartphone, LucideMonitor, LucideUserPen, LucideServer],
+    LucideFingerprintPattern, LucideSmartphone, LucideMonitor, LucideUserPen, LucideServer, LucideHouse, LucideClock, LucideCheck],
   template: `
     <div class="mx-auto max-w-[820px] min-h-full pb-10">
       <header class="sticky top-0 z-10 h-14 px-1 bg-white border-b border-slate-200 flex items-center gap-1">
@@ -27,6 +27,10 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
 
       <div class="p-4 flex flex-col gap-4">
         @if (!personId && data()?.today) { <ws-check-in-card [today]="data()!.today" [shift]="data()!.shift" (changed)="punched($event)" /> }
+        @if (!personId && rules()?.wfhEnabled) {
+          <button type="button" (click)="openWfh()" class="self-start h-10 px-4 rounded-full bg-white border border-slate-200 text-[14px] font-semibold text-slate-800 flex items-center gap-2 cursor-pointer hover:border-cyan-400">
+            <svg lucideHouse [size]="17" class="text-cyan-700" aria-hidden="true"></svg>Ask to work from home</button>
+        }
 
         <div class="flex items-center gap-2">
           <button type="button" (click)="move(-1)" aria-label="Previous month" class="w-11 h-11 flex items-center justify-center rounded-full bg-white border border-slate-200 cursor-pointer"><svg lucideChevronLeft [size]="20" aria-hidden="true"></svg></button>
@@ -46,7 +50,7 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
               </div>
             }
           </div>
-          <p class="m-0 px-1 text-[12px] text-slate-500">{{ m.shift.name }} shift {{ m.shift.start }}–{{ m.shift.end }} · late after {{ m.shift.graceMinutes }} min · full day {{ m.shift.fullDayHours }} h, half day {{ m.shift.halfDayHours }} h</p>
+          <p class="m-0 px-1 text-[12px] text-slate-500">{{ m.shift.name }} shift {{ m.shift.start }}–{{ m.shift.end }} · late after {{ m.shift.graceMinutes }} min · full day {{ m.shift.fullDayHours }} h, half day {{ m.shift.halfDayHours }} h@if (m.summary.wfh) { · <b class="text-cyan-800">{{ m.summary.wfh }} WFH</b> }@if (m.summary.overtimeMinutes) { · <b class="text-slate-700">{{ hours(m.summary.overtimeMinutes) }} overtime</b> }</p>
 
           <div class="rounded-14 bg-white border border-slate-200 overflow-hidden">
             <div class="grid grid-cols-7 border-b border-slate-200">
@@ -64,6 +68,9 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
                     </span>
                     @if (c.in) { <span class="text-[10px] lg:text-[11px] mono text-slate-700 leading-tight">{{ c.in }}{{ c.out ? '–' + c.out : '' }}</span> }
                     @else if (short(c)) { <span class="text-[10px] lg:text-[11px] leading-tight truncate w-full" [class]="color(c).text">{{ short(c) }}</span> }
+                    @if (c.pending) { <span class="text-[10px] font-semibold text-amber-700 leading-tight">{{ c.pending === 'Correction' ? 'Fix asked' : 'WFH asked' }}</span> }
+                    @else if (c.wfh && c.status !== 'WFH' && c.status !== 'Upcoming') { <span class="text-[10px] font-semibold text-cyan-700 leading-tight">WFH</span> }
+                    @else if (c.wfh && c.status === 'Upcoming') { <span class="text-[10px] font-semibold text-cyan-700 leading-tight">WFH</span> }
                   </button>
                 } @else { <span class="min-h-[64px] lg:min-h-[78px] border-b border-r border-slate-100 bg-slate-50/50"></span> }
               }
@@ -72,6 +79,29 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
           <div class="flex flex-wrap gap-x-3 gap-y-1 px-1" aria-label="Legend">
             @for (k of legend; track k) { <span class="flex items-center gap-1 text-[12px] text-slate-600"><span class="w-2 h-2 rounded-full" [style.background]="colors[k].dot"></span>{{ colors[k].label }}</span> }
           </div>
+          @if (!personId && requests().length) {
+            <section class="flex flex-col gap-2">
+              <h2 class="m-0 px-1 text-[13px] font-semibold text-slate-600 uppercase tracking-[.06em]">My requests</h2>
+              <ul class="list-none m-0 p-0 rounded-14 bg-white border border-slate-200 overflow-hidden">
+                @for (r of requests(); track r.id) {
+                  <li class="flex items-start gap-3 px-3 py-3 border-b border-slate-100 last:border-b-0">
+                    <span class="w-9 h-9 shrink-0 rounded-full flex items-center justify-center" [class]="r.kind === 'WorkFromHome' ? 'bg-cyan-50 text-cyan-700' : 'bg-amber-50 text-amber-700'" aria-hidden="true">
+                      @if (r.kind === 'WorkFromHome') { <svg lucideHouse [size]="17"></svg> } @else { <svg lucideClock [size]="17"></svg> }
+                    </span>
+                    <span class="flex-1 min-w-0 flex flex-col">
+                      <span class="text-[14px] font-semibold">{{ r.kind === 'WorkFromHome' ? 'Work from home' : 'Correction' }} · {{ r.datesLabel }}</span>
+                      <span class="text-[12px] text-slate-600">{{ requestDetail(r) }}</span>
+                      @if (r.decisionNote) { <span class="text-[12px] text-rose-700">{{ r.decidedByName }}: “{{ r.decisionNote }}”</span> }
+                    </span>
+                    <span class="flex flex-col items-end gap-1">
+                      <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold" [class]="statusClass(r.status)">{{ statusLabel(r.status) }}</span>
+                      @if (r.canCancel) { <button type="button" (click)="withdraw(r)" class="h-8 px-2 rounded-lg bg-transparent border-0 text-[12px] font-semibold text-slate-600 hover:bg-slate-100 cursor-pointer">Withdraw</button> }
+                    </span>
+                  </li>
+                }
+              </ul>
+            </section>
+          }
         }
       </div>
 
@@ -105,7 +135,7 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
                       <span class="w-8 h-8 shrink-0 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center" aria-hidden="true">
                         @switch (p.source) {
                           @case ('Device') { <svg lucideFingerprintPattern [size]="16"></svg> } @case ('Agent') { <svg lucideServer [size]="16"></svg> }
-                          @case ('Import') { <svg lucideServer [size]="16"></svg> } @case ('Manual') { <svg lucideUserPen [size]="16"></svg> }
+                          @case ('Import') { <svg lucideServer [size]="16"></svg> } @case ('Manual') { <svg lucideUserPen [size]="16"></svg> } @case ('Correction') { <svg lucideCheck [size]="16"></svg> }
                           @case ('Mobile') { <svg lucideSmartphone [size]="16"></svg> } @default { <svg lucideMonitor [size]="16"></svg> }
                         }
                       </span>
@@ -120,6 +150,23 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
                 </ul>
               }
             </section>
+            @if (!personId && canAskFix(d)) {
+              @if (d.pending === 'Correction') {
+                <p class="m-0 p-3 rounded-12 bg-amber-50 text-[14px] text-amber-900 flex items-center gap-2"><svg lucideClock [size]="16" aria-hidden="true"></svg>Correction asked; waiting for your manager.</p>
+              } @else {
+                <section class="flex flex-col gap-3 p-3 rounded-14 bg-slate-50 border border-slate-200">
+                  <h3 class="m-0 text-[14px] font-semibold">Something wrong? Ask for a correction</h3>
+                  <p class="m-0 -mt-2 text-[12px] text-slate-600">Give the real times; leave one empty if it was recorded. Your manager approves.</p>
+                  @if (fixError()) { <div class="ws-alert" role="alert">{{ fixError() }}</div> }
+                  <div class="grid grid-cols-2 gap-2">
+                    <label class="ws-field">Check-in <input class="ws-input" type="time" [value]="fixIn()" (input)="fixIn.set($any($event.target).value)" /></label>
+                    <label class="ws-field">Check-out <input class="ws-input" type="time" [value]="fixOut()" (input)="fixOut.set($any($event.target).value)" /></label>
+                  </div>
+                  <label class="ws-field">Reason <input class="ws-input" maxlength="500" [value]="fixReason()" (input)="fixReason.set($any($event.target).value)" placeholder="e.g. Machine didn't read my thumb" /></label>
+                  <button type="button" (click)="askFix(d)" [disabled]="asking() || (!fixIn() && !fixOut()) || !fixReason().trim()" class="ws-btn ws-btn-primary !h-11">{{ asking() ? 'Sending…' : 'Send to my manager' }}</button>
+                </section>
+              }
+            }
             @if (data()?.canCorrect && d.status !== 'Upcoming' && d.status !== 'NotJoined') {
               <section class="flex flex-col gap-3 p-3 rounded-14 bg-slate-50 border border-slate-200">
                 <h3 class="m-0 text-[14px] font-semibold">Add a missed punch</h3>
@@ -134,6 +181,26 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
           </section>
         </div>
       }
+      @if (wfhOpen()) {
+        <div class="fixed inset-0 z-40 bg-slate-900/45 flex items-end lg:items-center justify-center" (click)="wfhOpen.set(false)">
+          <section role="dialog" aria-modal="true" aria-label="Ask to work from home" (click)="$event.stopPropagation()"
+                   class="w-full lg:max-w-[460px] bg-white rounded-t-[20px] lg:rounded-[20px] px-5 pt-3 pb-[calc(20px+env(safe-area-inset-bottom))] flex flex-col gap-4">
+            <span aria-hidden="true" class="lg:hidden self-center w-10 h-1 rounded-full bg-slate-300"></span>
+            <div class="flex items-center gap-2">
+              <h2 class="m-0 flex-1 text-[19px] font-bold">Work from home</h2>
+              <button type="button" (click)="wfhOpen.set(false)" aria-label="Close" class="w-10 h-10 flex items-center justify-center rounded-full bg-transparent border-0 hover:bg-slate-100 cursor-pointer"><svg lucideX [size]="20" aria-hidden="true"></svg></button>
+            </div>
+            @if (wfhError()) { <div class="ws-alert" role="alert">{{ wfhError() }}</div> }
+            <div class="grid grid-cols-2 gap-3">
+              <label class="ws-field">From <input class="ws-input" type="date" [value]="wfhFrom()" (change)="setWfhFrom($any($event.target).value)" /></label>
+              <label class="ws-field">To <input class="ws-input" type="date" [value]="wfhTo()" [min]="wfhFrom()" (change)="wfhTo.set($any($event.target).value)" /></label>
+            </div>
+            <label class="ws-field">Reason <input class="ws-input" maxlength="500" [value]="wfhReason()" (input)="wfhReason.set($any($event.target).value)" placeholder="e.g. Plumber visiting" /></label>
+            <p class="m-0 text-[12px] text-slate-600">Weekends and holidays in between aren’t counted.{{ rules()?.wfhNeedsCheckIn ? ' Check in from the app on these days as usual.' : ' Approved days count as present.' }}{{ rules()?.wfhDaysPerMonth ? ' Up to ' + rules()!.wfhDaysPerMonth + ' days a month.' : '' }}</p>
+            <button type="button" (click)="askWfh()" [disabled]="asking() || !wfhFrom() || !wfhReason().trim()" class="ws-btn ws-btn-primary">{{ asking() ? 'Sending…' : 'Send to my manager' }}</button>
+          </section>
+        </div>
+      }
     </div>
   `,
 })
@@ -145,7 +212,7 @@ export class AttendancePage {
   readonly canTeam = this.auth.can('attendance.regularise') || this.auth.can('leave.approve');
   readonly week = WEEK;
   readonly colors = STATUS_COLOR;
-  readonly legend = ['Present', 'Late', 'HalfDay', 'Absent', 'Missing', 'Leave', 'Holiday'];
+  readonly legend = ['Present', 'Late', 'HalfDay', 'WFH', 'Absent', 'Missing', 'Leave', 'Holiday'];
   readonly todayIso = this.iso(new Date());
   readonly thisMonth = this.todayIso.slice(0, 7);
   readonly month = signal(this.thisMonth);
@@ -153,6 +220,11 @@ export class AttendancePage {
   readonly loading = signal(true); readonly error = signal<string | null>(null);
   readonly selected = signal<AttDay | null>(null);
   readonly punches = signal<PunchItem[]>([]); readonly punchesLoading = signal(false);
+  readonly rules = signal<AttRules | null>(null);
+  readonly requests = signal<AttRequest[]>([]);
+  readonly fixIn = signal(''); readonly fixOut = signal(''); readonly fixReason = signal(''); readonly fixError = signal<string | null>(null);
+  readonly asking = signal(false);
+  readonly wfhOpen = signal(false); readonly wfhFrom = signal(''); readonly wfhTo = signal(''); readonly wfhReason = signal(''); readonly wfhError = signal<string | null>(null);
   readonly addTime = signal('09:30'); readonly addNote = signal(''); readonly adding = signal(false); readonly addError = signal<string | null>(null);
 
   readonly title = computed(() => { const [y, m] = this.month().split('-').map(Number); return `${MONTHS[m - 1]} ${y}`; });
@@ -171,7 +243,56 @@ export class AttendancePage {
     ];
   });
 
-  constructor() { void this.load(); }
+  constructor() {
+    void this.load();
+    if (!this.personId) {
+      firstValueFrom(this.svc.rules()).then(r => this.rules.set(r)).catch(() => {});
+      void this.loadRequests();
+    }
+  }
+
+  async loadRequests() { try { this.requests.set(await firstValueFrom(this.svc.myRequests())); } catch { /* list stays as it was */ } }
+
+  canAskFix(d: AttDay) {
+    const r = this.rules(); if (!r) return false;
+    if (d.status === 'Upcoming' || d.status === 'NotJoined' || d.date > this.todayIso) return false;
+    const oldest = new Date(); oldest.setDate(oldest.getDate() - r.correctionDaysBack);
+    return d.date >= this.iso(oldest);
+  }
+  async askFix(d: AttDay) {
+    this.asking.set(true); this.fixError.set(null);
+    try {
+      await firstValueFrom(this.svc.ask({ kind: 'Correction', fromDate: d.date, inTime: this.fixIn() || null, outTime: this.fixOut() || null, reason: this.fixReason().trim() }));
+      this.toast.show('Sent to your manager');
+      await Promise.all([this.load(), this.loadRequests()]);
+      this.selected.set(this.data()?.days.find(x => x.date === d.date) ?? d);
+    } catch (e) { this.fixError.set(errorText(e, 'Could not send it.')); }
+    finally { this.asking.set(false); }
+  }
+  openWfh() {
+    const t = new Date(); t.setDate(t.getDate() + 1);
+    this.wfhFrom.set(this.iso(t)); this.wfhTo.set(this.iso(t)); this.wfhReason.set(''); this.wfhError.set(null); this.wfhOpen.set(true);
+  }
+  setWfhFrom(v: string) { this.wfhFrom.set(v); if (!this.wfhTo() || this.wfhTo() < v) this.wfhTo.set(v); }
+  async askWfh() {
+    this.asking.set(true); this.wfhError.set(null);
+    try {
+      const r = await firstValueFrom(this.svc.ask({ kind: 'WorkFromHome', fromDate: this.wfhFrom(), toDate: this.wfhTo() || this.wfhFrom(), reason: this.wfhReason().trim() }));
+      this.wfhOpen.set(false); this.toast.show(`Asked for ${r.days} day${r.days === 1 ? '' : 's'} from home`);
+      await Promise.all([this.load(), this.loadRequests()]);
+    } catch (e) { this.wfhError.set(errorText(e, 'Could not send it.')); }
+    finally { this.asking.set(false); }
+  }
+  async withdraw(r: AttRequest) {
+    try { await firstValueFrom(this.svc.cancel(r.id)); this.toast.show('Withdrawn'); await Promise.all([this.load(), this.loadRequests()]); }
+    catch (e) { this.toast.show(errorText(e, 'Could not withdraw it.'), 'error'); }
+  }
+  requestDetail(r: AttRequest) {
+    const t = r.kind === 'Correction' ? [r.inTime ? 'in ' + r.inTime : '', r.outTime ? 'out ' + r.outTime : ''].filter(Boolean).join(', ') : `${r.days} day${r.days === 1 ? '' : 's'}`;
+    return `${t} · “${r.reason}”`;
+  }
+  statusLabel(s: string) { return s === 'Pending' ? 'Waiting' : s === 'Rejected' ? 'Declined' : s === 'Cancelled' ? 'Withdrawn' : s; }
+  statusClass(s: string) { return s === 'Approved' ? 'bg-emerald-50 text-emerald-800' : s === 'Pending' ? 'bg-amber-50 text-amber-800' : s === 'Rejected' ? 'bg-rose-50 text-rose-800' : 'bg-slate-100 text-slate-600'; }
 
   private iso(d: Date) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
 
@@ -193,6 +314,7 @@ export class AttendancePage {
 
   async open(d: AttDay) {
     this.selected.set(d); this.addError.set(null); this.addNote.set('');
+    this.fixIn.set(''); this.fixOut.set(''); this.fixReason.set(''); this.fixError.set(null);
     this.punchesLoading.set(true);
     try { this.punches.set(await firstValueFrom(this.svc.punches(this.data()!.employeeId, d.date))); }
     catch { this.punches.set([]); }
@@ -220,7 +342,7 @@ export class AttendancePage {
 
   color(d: AttDay) { return STATUS_COLOR[d.status] ?? STATUS_COLOR['Upcoming']; }
   short(d: AttDay) {
-    return d.status === 'Holiday' ? d.label : d.status === 'Leave' ? 'Leave' : d.status === 'Absent' ? 'Absent'
+    return d.status === 'WFH' ? 'WFH' : d.status === 'Holiday' ? d.label : d.status === 'Leave' ? 'Leave' : d.status === 'Absent' ? 'Absent'
       : d.status === 'Weekend' || d.status === 'Upcoming' || d.status === 'NotJoined' || d.status === 'NoRecord' ? '' : this.color(d).label;
   }
   dayNo(iso: string) { return Number(iso.slice(8, 10)); }
@@ -233,6 +355,7 @@ export class AttendancePage {
       case 'Agent': return `Connector${p.deviceName ? ': ' + p.deviceName : ''}`;
       case 'Import': return 'File import';
       case 'Manual': return `Added by ${p.addedByName ?? 'HR'}`;
+      case 'Correction': return `Correction approved by ${p.addedByName ?? 'manager'}`;
       case 'Mobile': return p.latitude ? 'Phone · location saved' : 'Phone';
       default: return p.latitude ? 'Web · location saved' : 'Web';
     }

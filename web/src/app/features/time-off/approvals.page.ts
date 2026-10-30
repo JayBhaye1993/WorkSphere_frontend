@@ -10,10 +10,11 @@ import { errorText } from '../people/people-errors';
 import { AvatarComponent } from '../../shared/avatar.component';
 import { ToastService } from '../../core/services/toast.service';
 import { saveBlob } from '../../core/util/download';
+import { AttRequest, AttendanceService } from '../attendance/attendance.service';
 
-type Item = { kind: 'leave'; r: LeaveRequest } | { kind: 'comp'; c: CompOffClaim };
+type Item = { kind: 'leave'; r: LeaveRequest } | { kind: 'comp'; c: CompOffClaim } | { kind: 'att'; a: AttRequest };
 
-/** Time off and comp-off claims waiting for the viewer, with select-and-approve for several at once. */
+/** Time off, comp-off claims and attendance requests (corrections, work from home) waiting for the viewer, with select-and-approve for several at once. */
 @Component({
   standalone: true,
   imports: [SkeletonComponent, RouterLink, AvatarComponent, LucideArrowLeft, LucideX],
@@ -79,6 +80,29 @@ type Item = { kind: 'leave'; r: LeaveRequest } | { kind: 'comp'; c: CompOffClaim
               }
             </section>
           }
+          @if (atts().length) {
+            <section class="flex flex-col gap-3">
+              <h2 class="m-0 px-1 text-[13px] font-semibold text-slate-600 uppercase tracking-[.06em]">Attendance · {{ atts().length }}</h2>
+              @for (a of atts(); track a.id) {
+                <article class="p-4 rounded-14 bg-white border flex flex-col gap-3 !border-l-4" [class]="(selected().has(a.id) ? 'border-indigo-400 ring-2 ring-indigo-100 ' : 'border-slate-200 ') + (a.kind === 'WorkFromHome' ? '!border-l-cyan-500' : '!border-l-orange-400')">
+                  <div class="flex items-start gap-3">
+                    <input type="checkbox" class="mt-2.5 w-5 h-5 accent-indigo-600 shrink-0" [checked]="selected().has(a.id)" (change)="toggle(a.id)" [attr.aria-label]="'Select ' + a.employeeName" />
+                    <a [routerLink]="['/attendance/people', a.employeeId]" class="shrink-0"><ws-avatar [name]="a.employeeName" [size]="40" /></a>
+                    <div class="flex-1 min-w-0 flex flex-col gap-0.5">
+                      <a [routerLink]="['/attendance/people', a.employeeId]" class="text-[15px] font-semibold text-slate-900 no-underline">{{ a.employeeName }}</a>
+                      <span class="text-[14px] text-slate-800">{{ a.kind === 'WorkFromHome' ? 'Work from home' : 'Correct attendance' }} · {{ a.datesLabel }}</span>
+                      <span class="text-[13px] text-slate-600">{{ attDetail(a) }}</span>
+                      <span class="text-[13px] text-slate-700">“{{ a.reason }}”</span>
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <button type="button" (click)="openDecline({ kind: 'att', a })" [disabled]="busy()" class="ws-btn ws-btn-ghost !h-11">Decline</button>
+                    <button type="button" (click)="approveOne(a.id)" [disabled]="busy()" class="ws-btn ws-btn-primary !h-11">Approve</button>
+                  </div>
+                </article>
+              }
+            </section>
+          }
         }
       </div>
 
@@ -94,7 +118,7 @@ type Item = { kind: 'leave'; r: LeaveRequest } | { kind: 'comp'; c: CompOffClaim
                    class="w-full lg:max-w-[460px] bg-white rounded-t-[20px] lg:rounded-[20px] px-5 pt-3 pb-[calc(20px+env(safe-area-inset-bottom))] flex flex-col gap-4">
             <span aria-hidden="true" class="lg:hidden self-center w-10 h-1 rounded-full bg-slate-300"></span>
             <div class="flex items-center gap-2">
-              <h2 class="m-0 flex-1 text-[19px] font-bold">Decline {{ who(it) }}’s {{ it.kind === 'leave' ? 'request' : 'claim' }}</h2>
+              <h2 class="m-0 flex-1 text-[19px] font-bold">Decline {{ who(it) }}’s {{ it.kind === 'comp' ? 'claim' : 'request' }}</h2>
               <button type="button" (click)="declining.set(null)" aria-label="Close" class="w-10 h-10 flex items-center justify-center rounded-full bg-transparent border-0 hover:bg-slate-100 cursor-pointer"><svg lucideX [size]="20" aria-hidden="true"></svg></button>
             </div>
             <p class="m-0 text-[14px] text-slate-700">{{ summary(it) }}</p>
@@ -111,37 +135,45 @@ type Item = { kind: 'leave'; r: LeaveRequest } | { kind: 'comp'; c: CompOffClaim
 })
 export class ApprovalsPage {
   private readonly svc = inject(TimeOffService);
+  private readonly att = inject(AttendanceService);
   private readonly toast = inject(ToastService);
   readonly loading = signal(true); readonly error = signal<string | null>(null);
   readonly items = signal<LeaveRequest[]>([]);
   readonly claims = signal<CompOffClaim[]>([]);
+  readonly atts = signal<AttRequest[]>([]);
   readonly selected = signal(new Set<string>());
   readonly busy = signal(false);
   readonly declining = signal<Item | null>(null);
   readonly reason = signal(''); readonly sheetError = signal<string | null>(null);
-  readonly total = computed(() => this.items().length + this.claims().length);
+  readonly total = computed(() => this.items().length + this.claims().length + this.atts().length);
 
   constructor() { void this.load(); }
 
   async load() {
     try {
-      const [a, b] = await Promise.all([firstValueFrom(this.svc.approvals()), firstValueFrom(this.svc.compOffApprovals())]);
-      this.items.set(a); this.claims.set(b);
+      const [a, b, c] = await Promise.all([firstValueFrom(this.svc.approvals()), firstValueFrom(this.svc.compOffApprovals()),
+        firstValueFrom(this.att.approvals()).catch(() => [] as AttRequest[])]);
+      this.items.set(a); this.claims.set(b); this.atts.set(c);
     } catch (e) { this.error.set(errorText(e, 'Could not load approvals.')); }
     finally { this.loading.set(false); }
   }
 
   toggle(id: string) { this.selected.update(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; }); }
   toggleAll() {
-    const all = [...this.items().map(r => r.id), ...this.claims().map(c => c.id)];
+    const all = [...this.items().map(r => r.id), ...this.claims().map(c => c.id), ...this.atts().map(a => a.id)];
     this.selected.set(this.selected().size === all.length ? new Set() : new Set(all));
   }
 
   private async approveIds(ids: string[]): Promise<{ ok: number; failed: string[] }> {
     let ok = 0; const failed: string[] = [];
     for (const id of ids) {
-      const isClaim = this.claims().some(c => c.id === id);
-      try { if (isClaim) await firstValueFrom(this.svc.approveCompOff(id)); else await firstValueFrom(this.svc.approve(id)); ok++; this.drop(id); }
+      const isClaim = this.claims().some(c => c.id === id), isAtt = this.atts().some(a => a.id === id);
+      try {
+        if (isClaim) await firstValueFrom(this.svc.approveCompOff(id));
+        else if (isAtt) await firstValueFrom(this.att.approve(id));
+        else await firstValueFrom(this.svc.approve(id));
+        ok++; this.drop(id);
+      }
       catch (e) { failed.push(errorText(e, 'Could not approve.')); }
     }
     return { ok, failed };
@@ -167,7 +199,8 @@ export class ApprovalsPage {
     this.busy.set(true); this.sheetError.set(null);
     try {
       if (it.kind === 'leave') { await firstValueFrom(this.svc.reject(it.r.id, this.reason().trim())); this.drop(it.r.id); }
-      else { await firstValueFrom(this.svc.rejectCompOff(it.c.id, this.reason().trim())); this.drop(it.c.id); }
+      else if (it.kind === 'comp') { await firstValueFrom(this.svc.rejectCompOff(it.c.id, this.reason().trim())); this.drop(it.c.id); }
+      else { await firstValueFrom(this.att.decline(it.a.id, this.reason().trim())); this.drop(it.a.id); }
       this.declining.set(null); this.toast.show('Declined');
     } catch (e) { this.sheetError.set(errorText(e, 'Could not decline.')); }
     finally { this.busy.set(false); }
@@ -176,14 +209,22 @@ export class ApprovalsPage {
   private drop(id: string) {
     this.items.update(x => x.filter(i => i.id !== id));
     this.claims.update(x => x.filter(i => i.id !== id));
+    this.atts.update(x => x.filter(i => i.id !== id));
     this.selected.update(s => { const n = new Set(s); n.delete(id); return n; });
   }
   async open(r: LeaveRequest) {
     try { const x = await firstValueFrom(this.svc.attachment(r.id, r.attachmentName ?? 'document')); saveBlob(x.blob, x.name); }
     catch (e) { this.toast.show(errorText(e, 'Could not open the document.'), 'error'); }
   }
-  who(it: Item) { return it.kind === 'leave' ? it.r.employeeName : it.c.employeeName; }
-  summary(it: Item) { return it.kind === 'leave' ? `${it.r.leaveTypeName}, ${range(it.r)}` : `Comp-off for ${it.c.workedLabel}`; }
+  who(it: Item) { return it.kind === 'leave' ? it.r.employeeName : it.kind === 'comp' ? it.c.employeeName : it.a.employeeName; }
+  summary(it: Item) {
+    return it.kind === 'leave' ? `${it.r.leaveTypeName}, ${range(it.r)}` : it.kind === 'comp' ? `Comp-off for ${it.c.workedLabel}`
+      : `${it.a.kind === 'WorkFromHome' ? 'Work from home' : 'Correction'}, ${it.a.datesLabel}`;
+  }
+  attDetail(a: AttRequest) {
+    if (a.kind === 'WorkFromHome') return `${a.days} working day${a.days === 1 ? '' : 's'}`;
+    return [a.inTime ? `Check-in ${a.inTime}` : '', a.outTime ? `check-out ${a.outTime}` : ''].filter(Boolean).join(', ');
+  }
   rng(r: LeaveRequest) { return range(r); }
   d(n: number) { return days(n); }
 }

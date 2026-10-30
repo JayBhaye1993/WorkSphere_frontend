@@ -2,7 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { Location } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { LucideArrowLeft, LucideBellOff, LucideCalendarDays, LucideCheckCheck, LucideListTodo, LucideSettings, LucideShield, LucideUsers } from '@lucide/angular';
+import { LucideArrowLeft, LucideBellOff, LucideCalendarDays, LucideCheckCheck, LucideListTodo, LucideSettings, LucideShield, LucideUsers, LucideClock } from '@lucide/angular';
 import { InboxItem, NotificationsService } from './notifications.service';
 import { errorText } from '../people/people-errors';
 import { ToastService } from '../../core/services/toast.service';
@@ -11,7 +11,7 @@ import { SkeletonComponent } from '../../shared/skeleton.component';
 /** Your notifications, newest first. Tap one to open what it's about; it's marked read. */
 @Component({
   standalone: true,
-  imports: [RouterLink, SkeletonComponent, LucideArrowLeft, LucideBellOff, LucideCalendarDays, LucideCheckCheck, LucideListTodo, LucideSettings, LucideShield, LucideUsers],
+  imports: [RouterLink, SkeletonComponent, LucideArrowLeft, LucideBellOff, LucideCalendarDays, LucideCheckCheck, LucideListTodo, LucideSettings, LucideShield, LucideUsers, LucideClock],
   template: `
     <div class="mx-auto max-w-[720px] min-h-full pb-8">
       <header class="sticky top-0 z-10 bg-white border-b border-slate-200">
@@ -49,6 +49,7 @@ import { SkeletonComponent } from '../../shared/skeleton.component';
                       <span class="w-9 h-9 shrink-0 rounded-full flex items-center justify-center" [class]="tint(n)" aria-hidden="true">
                         @switch (n.category) {
                           @case ('TimeOff') { <svg lucideCalendarDays [size]="17"></svg> }
+                          @case ('Attendance') { <svg lucideClock [size]="17"></svg> }
                           @case ('Tasks') { <svg lucideListTodo [size]="17"></svg> }
                           @case ('Account') { <svg lucideShield [size]="17"></svg> }
                           @default { <svg lucideUsers [size]="17"></svg> }
@@ -132,7 +133,7 @@ export class InboxPage {
   back() { if (history.length > 1) this.location.back(); else void this.router.navigate(['/home']); }
 
   tint(n: InboxItem) {
-    return n.category === 'TimeOff' ? 'bg-sky-100 text-sky-700' : n.category === 'Tasks' ? 'bg-violet-100 text-violet-700'
+    return n.category === 'TimeOff' ? 'bg-sky-100 text-sky-700' : n.category === 'Attendance' ? 'bg-orange-100 text-orange-700' : n.category === 'Tasks' ? 'bg-violet-100 text-violet-700'
       : n.category === 'Account' ? 'bg-slate-100 text-slate-700' : 'bg-emerald-100 text-emerald-700';
   }
 
